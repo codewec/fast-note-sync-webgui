@@ -27,6 +27,10 @@ export default defineConfig({
        '^/(share.html|share)/.*': {
           target: 'http://localhost:5173',
           rewrite: () => '/share.html',
+       },
+       '/api': {
+          target: 'http://localhost:9000',
+          changeOrigin: true,
        }
     }
   },
