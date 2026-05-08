@@ -137,13 +137,14 @@ export function BackupHistoryDialog({ configId, configType, open, onOpenChange }
                                         : t("ui.backup.history.backupStats")}
                                 </TableHead>
                                 <TableHead>{t("ui.backup.history.backupFile")}</TableHead>
+                                <TableHead>{t("ui.backup.history.password")}</TableHead>
                                 <TableHead className="max-w-[200px]">{t("ui.backup.history.message")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-48">
+                                    <TableCell colSpan={7} className="h-48">
                                         <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
                                             <Loader2 className="h-8 w-8 animate-spin opacity-50" />
                                             <span className="text-xs">{t("ui.common.loading")}</span>
@@ -191,6 +192,29 @@ export function BackupHistoryDialog({ configId, configType, open, onOpenChange }
                                                         <span title={item.filePath} className="truncate inline-block max-w-full">{fileName}</span>
                                                     );
                                                 })()
+                                            ) : (
+                                                <span className="text-muted-foreground">-</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {item.password ? (
+                                                <div className="flex items-center gap-1">
+                                                    <span className="font-mono text-[10px] bg-muted px-1 rounded truncate max-w-[80px]" title={item.password}>{item.password}</span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-5 w-5 shrink-0 text-muted-foreground hover:text-primary"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(item.password!).then(
+                                                                () => toast.success(t("ui.common.copied")),
+                                                                () => toast.error(t("ui.common.error"))
+                                                            );
+                                                        }}
+                                                        title={t("ui.common.copy")}
+                                                    >
+                                                        <Copy className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
                                             ) : (
                                                 <span className="text-muted-foreground">-</span>
                                             )}
@@ -252,7 +276,7 @@ export function BackupHistoryDialog({ configId, configType, open, onOpenChange }
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                                    <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">
                                         {t("ui.backup.history.noData")}
                                     </TableCell>
                                 </TableRow>

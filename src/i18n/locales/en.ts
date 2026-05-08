@@ -536,6 +536,7 @@ export default {
     "ui.backup.history.backupStats": "Backup Statistics",
     "ui.backup.history.syncStats": "Sync Statistics",
     "ui.backup.history.backupFile": "Backup File",
+    "ui.backup.history.password": "Extraction Password",
     "ui.backup.history.message": "Message",
     "ui.backup.history.copyError": "Copy Error Message",
     "ui.backup.history.noData": "No task records yet",

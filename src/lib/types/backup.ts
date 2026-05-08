@@ -29,6 +29,7 @@ export interface BackupHistory {
     status: number;
     message?: string;
     filePath?: string;
+    password?: string;
     fileSize?: number;
     fileCount?: number;
     startTime: string;

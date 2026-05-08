@@ -537,6 +537,7 @@ export default {
     "ui.backup.history.backupStats": "备份统计",
     "ui.backup.history.syncStats": "同步统计",
     "ui.backup.history.backupFile": "备份文件",
+    "ui.backup.history.password": "解压密码",
     "ui.backup.history.message": "消息",
     "ui.backup.history.copyError": "复制错误信息",
     "ui.backup.history.noData": "暂无任务记录",
