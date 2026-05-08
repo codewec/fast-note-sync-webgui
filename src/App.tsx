@@ -23,6 +23,7 @@ const SyncBackup = lazy(() => import("@/components/layout/sync-backup").then(m =
 const GitAutomation = lazy(() => import("@/components/layout/git-automation").then(m => ({ default: m.GitAutomation })));
 const SettingManager = lazy(() => import("@/components/setting/setting-manager").then(m => ({ default: m.SettingManager })));
 const SyncLogManager = lazy(() => import("@/components/sync-log/sync-log-manager").then(m => ({ default: m.SyncLogManager })));
+const AdminSetupDialog = lazy(() => import("@/components/user/admin-setup-dialog").then(m => ({ default: m.AdminSetupDialog })));
 
 // 加载占位符
 const PageLoading = () => (
@@ -59,13 +60,58 @@ function App() {
   const [configLoaded, setConfigLoaded] = useState(false)
 
   const currentUid = localStorage.getItem("uid") ? parseInt(localStorage.getItem("uid")!) : null
-  const isAdmin = adminUid !== null && currentUid !== null && (adminUid === 0 || adminUid === currentUid)
+  const [isAdminByCheck, setIsAdminByCheck] = useState<boolean | null>(null)
+  const isAdmin = isAdminByCheck === true
 
   useEffect(() => {
     if (isLoggedIn) {
       handleUserInfo(logout)
     }
   }, [isLoggedIn, handleUserInfo, logout])
+
+  const fetchAdminInfo = useCallback(async () => {
+    if (!isLoggedIn) {
+      setAdminUid(null)
+      setIsAdminByCheck(null)
+      return
+    }
+
+    const apiUrl = env.API_URL.endsWith("/") ? env.API_URL.slice(0, -1) : env.API_URL
+    const token = localStorage.getItem("token") || ""
+    try {
+      const response = await fetch(addCacheBuster(`${apiUrl}/api/admin/check`), {
+        headers: buildApiHeaders({ token, includeDomain: false, includeContentType: false }),
+      })
+      if (response.ok) {
+        const res = await response.json()
+        if (res.code > 0 && res.data) {
+          setIsAdminByCheck(res.data.isAdmin)
+          if (res.data.isAdmin) {
+            const configRes = await fetch(addCacheBuster(`${apiUrl}/api/admin/config`), {
+              headers: buildApiHeaders({ token, includeDomain: false, includeContentType: false }),
+            })
+            if (configRes.ok) {
+              const configData = await configRes.json()
+              if (configData.code > 0 && configData.data) {
+                setAdminUid(configData.data.adminUid)
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Fetch admin info failed", e)
+    }
+  }, [isLoggedIn])
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      void fetchAdminInfo()
+    } else {
+      setAdminUid(null)
+      setIsAdminByCheck(null)
+    }
+  }, [isLoggedIn, fetchAdminInfo])
 
   useEffect(() => {
     if ((currentModule !== "notes" && currentModule !== "files" && currentModule !== "trash" && currentModule !== "settings") || !isLoggedIn) return
@@ -118,48 +164,43 @@ function App() {
     handleFontsUpdate(fontUrl)
   }, [])
 
-  useEffect(() => {
-    let isMounted = true
-
-    const fetchConfig = async () => {
-        try {
-          const apiUrl = env.API_URL.endsWith("/") ? env.API_URL.slice(0, -1) : env.API_URL
-          const response = await fetch(addCacheBuster(`${apiUrl}/api/webgui/config`), {
-          headers: buildApiHeaders({
-            token: null,
-            includeContentType: false,
-            includeDomain: false,
-          }),
-          })
-        if (response.ok && isMounted) {
-          const res = await response.json()
-          if (res.code > 0 && res.data) {
-            onFontsUpdate(res.data.fontSet || res.data.FontSet || "")
-            if (res.data.registerIsEnable !== undefined) {
-              setRegisterIsEnable(res.data.registerIsEnable)
-            }
-            if (res.data.adminUid !== undefined) {
-              setAdminUid(res.data.adminUid)
-            }
+  const fetchConfig = useCallback(async (isMounted = true) => {
+    try {
+      const apiUrl = env.API_URL.endsWith("/") ? env.API_URL.slice(0, -1) : env.API_URL
+      const response = await fetch(addCacheBuster(`${apiUrl}/api/webgui/config`), {
+        headers: buildApiHeaders({
+          token: null,
+          includeContentType: false,
+          includeDomain: false,
+        }),
+      })
+      if (response.ok && isMounted) {
+        const res = await response.json()
+        if (res.code > 0 && res.data) {
+          onFontsUpdate(res.data.fontSet || res.data.FontSet || "")
+          if (res.data.registerIsEnable !== undefined) {
+            setRegisterIsEnable(res.data.registerIsEnable)
           }
         }
-      } catch (error: unknown) {
-        if (isMounted) {
-          toast.error(error instanceof Error ? error.message : String(error))
-        }
-      } finally {
-        if (isMounted) {
-          setConfigLoaded(true)
-        }
+      }
+    } catch (error: unknown) {
+      if (isMounted) {
+        toast.error(error instanceof Error ? error.message : String(error))
+      }
+    } finally {
+      if (isMounted) {
+        setConfigLoaded(true)
       }
     }
+  }, [onFontsUpdate, t])
 
-    fetchConfig()
-
+  useEffect(() => {
+    let isMounted = true
+    fetchConfig(isMounted)
     return () => {
       isMounted = false
     }
-  }, [onFontsUpdate])
+  }, [fetchConfig])
 
   const handleAuthSuccess = useCallback(() => {
     login()
@@ -320,6 +361,14 @@ function App() {
       <Suspense fallback={<PageLoading />}>
         {renderModuleContent()}
       </Suspense>
+      {isLoggedIn && adminUid === 0 && isAdmin && (
+        <Suspense>
+          <AdminSetupDialog onDone={() => {
+            void fetchAdminInfo()
+            fetchConfig()
+          }} />
+        </Suspense>
+      )}
     </AppLayout>
   )
 }
