@@ -1,18 +1,20 @@
-import { Pencil, Trash2, Plus, Key, Library, Clock, RefreshCw, Check, X, Search, GripVertical } from "lucide-react";
+import { Pencil, Trash2, Plus, Key, Library, RefreshCw, Check, X, Search, GripVertical, FileText, Paperclip, HardDrive, Wifi } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, rectSortingStrategy } from "@dnd-kit/sortable";
-
+import { TokenManager, TokenManagerHandle } from "@/components/user/token-manager";
 import { useConfirmDialog } from "@/components/context/confirm-dialog-context";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { ObsidianAuthModal } from "@/components/user/obsidian-auth-modal";
 import { useVaultHandle } from "@/components/api-handle/vault-handle";
-import { useState, useEffect, useCallback, useMemo } from "react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { toast } from "@/components/common/Toast";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { VaultType } from "@/lib/types/vault";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { CSS } from "@dnd-kit/utilities";
-import { ObsidianAuthModal } from "@/components/user/obsidian-auth-modal";
+import { cn } from "@/lib/utils";
 
 
 interface VaultListProps {
@@ -65,53 +67,72 @@ function SortableVaultCard({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 1,
   };
 
   return (
     <article
       ref={setNodeRef}
       style={style}
-      className="relative flex flex-col gap-4 rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:shadow-md hover:border-primary/30 cursor-pointer"
+      className={cn(
+        "relative flex flex-col gap-5 rounded-2xl border border-border/50 bg-card/60 p-5 transition-all duration-300",
+        "hover:shadow-xl hover:shadow-primary/5 hover:border-primary/40 hover:bg-card group cursor-pointer",
+        isDragging && "shadow-2xl border-primary/50 bg-card"
+      )}
       onClick={() => editingId !== vault.id && onNavigateToNotes && onNavigateToNotes(vault.vault)}
     >
-      {/* 头部：仓库名称 */}
-      <header className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary shrink-0">
-          <Library className="h-5 w-5" />
-        </span>
-        {editingId === vault.id ? (
-          <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
-            <Input
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              className="flex-1 rounded-xl"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") saveEdit(vault)
-                if (e.key === "Escape") cancelEdit()
-              }}
-            />
+      {/* 头部：仓库名称与状态 */}
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary shrink-0 border border-primary/20">
+            <Library className="h-5 w-5" />
+          </span>
+          <div className="flex-1 min-w-0">
+            {editingId === vault.id ? (
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <Input
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  className="h-9 rounded-xl border-primary/30 focus-visible:ring-primary/30"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdit(vault)
+                    if (e.key === "Escape") cancelEdit()
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                <h3 className="text-lg font-bold truncate leading-tight group-hover:text-primary transition-colors">
+                  {vault.vault}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal bg-primary/5 text-primary/70 border-primary/10">
+                    ID: {String(vault.id).slice(0, 8)}
+                  </Badge>
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <>
-            <h3 className="text-lg font-bold truncate flex-1">{vault.vault}</h3>
-            {/* 拖拽手柄 */}
-            <button
-              {...attributes}
-              {...listeners}
-              className="p-2 rounded-xl text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50 cursor-grab active:cursor-grabbing touch-none shrink-0"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <GripVertical className="h-5 w-5 md:h-4 md:w-4" />
-            </button>
-          </>
+        </div>
+
+        {/* 拖拽手柄 - 仅在非编辑模式显示 */}
+        {editingId !== vault.id && (
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-2 rounded-xl text-muted-foreground/30 hover:text-primary hover:bg-primary/5 cursor-grab active:cursor-grabbing transition-all shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-5 w-5" />
+          </button>
         )}
       </header>
 
-      {/* 统计信息 */}
-      <dl className="grid grid-cols-2 gap-3">
+      {/* 统计信息区 */}
+      <div className="grid grid-cols-2 gap-3">
         <div
-          className="flex flex-col rounded-lg border border-border/70 bg-background/80 p-3 hover:bg-primary/5 hover:border-primary/30 transition-colors group/stat"
+          className="relative flex flex-col gap-2 rounded-xl border border-border/40 bg-muted/30 p-3.5 hover:bg-primary/5 hover:border-primary/20 transition-all group/stat overflow-hidden"
           onClick={(e) => {
             if (editingId !== vault.id && onNavigateToNotes) {
               e.stopPropagation();
@@ -119,18 +140,25 @@ function SortableVaultCard({
             }
           }}
         >
-          <dt className="text-xs text-muted-foreground group-hover/stat:text-primary transition-colors">{t("ui.vault.note")}</dt>
-          <dd className="text-xl font-semibold flex items-center justify-between gap-1">
-            <span>{vault.noteCount}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t("ui.vault.note")}</span>
+            <FileText className="h-3.5 w-3.5 text-muted-foreground/40 group-hover/stat:text-primary/60 transition-colors" />
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-bold tracking-tight">{vault.noteCount}</span>
             {vault.noteSize !== undefined && (
-              <span className="text-[10px] font-normal text-muted-foreground/50">
+              <span className="text-[10px] text-muted-foreground/60 font-medium whitespace-nowrap">
                 {formatBytes(vault.noteSize)}
               </span>
             )}
-          </dd>
+          </div>
+          <div className="absolute -right-2 -bottom-2 opacity-[0.03] group-hover/stat:opacity-[0.06] transition-opacity">
+            <FileText className="h-12 w-12" />
+          </div>
         </div>
+
         <div
-          className="flex flex-col rounded-lg border border-border/70 bg-background/80 p-3 hover:bg-primary/5 hover:border-primary/30 transition-colors group/stat"
+          className="relative flex flex-col gap-2 rounded-xl border border-border/40 bg-muted/30 p-3.5 hover:bg-primary/5 hover:border-primary/20 transition-all group/stat overflow-hidden"
           onClick={(e) => {
             if (editingId !== vault.id && onNavigateToAttachments) {
               e.stopPropagation();
@@ -138,71 +166,76 @@ function SortableVaultCard({
             }
           }}
         >
-          <dt className="text-xs text-muted-foreground group-hover/stat:text-primary transition-colors">{t("ui.vault.attachmentCount")}</dt>
-          <dd className="text-xl font-semibold flex items-center justify-between gap-1">
-            <span>{vault.fileCount || "0"}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t("ui.vault.attachmentCount")}</span>
+            <Paperclip className="h-3.5 w-3.5 text-muted-foreground/40 group-hover/stat:text-primary/60 transition-colors" />
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-bold tracking-tight">{vault.fileCount || "0"}</span>
             {vault.fileSize !== undefined && (
-              <span className="text-[10px] font-normal text-muted-foreground/50">
+              <span className="text-[10px] text-muted-foreground/60 font-medium whitespace-nowrap">
                 {formatBytes(vault.fileSize)}
               </span>
             )}
-          </dd>
-        </div>
-      </dl>
-
-      {/* 底部信息 */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{t("ui.vault.totalSize", { size: formatBytes(vault.size) })}</span>
-        <div className="flex items-center gap-3">
-          {vault.createdAt && (
-            <Tooltip content={t("ui.common.createdAt")} side="top" delay={300}>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {vault.createdAt}
-              </span>
-            </Tooltip>
-          )}
-          {vault.updatedAt && (
-            <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
-              <span className="flex items-center gap-1">
-                <RefreshCw className="h-3 w-3" />
-                {vault.updatedAt}
-              </span>
-            </Tooltip>
-          )}
+          </div>
+          <div className="absolute -right-2 -bottom-2 opacity-[0.03] group-hover/stat:opacity-[0.06] transition-opacity">
+            <Paperclip className="h-12 w-12" />
+          </div>
         </div>
       </div>
 
-      {/* 操作按钮 */}
-      <div className="flex items-center justify-between gap-1 pt-2 border-t border-border">
+      {/* 容量与时间 */}
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between text-[11px]">
+          <div className="flex items-center gap-2 text-muted-foreground/70">
+            <HardDrive className="h-3.5 w-3.5" />
+            <span className="font-medium">{t("ui.vault.totalSize", { size: formatBytes(vault.size) })}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {vault.updatedAt && (
+              <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
+                <span className="flex items-center gap-1.5 text-muted-foreground/60">
+                  <RefreshCw className="h-3 w-3" />
+                  {vault.updatedAt.split(' ')[0]}
+                </span>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+
+        {/* 装饰性进度条 (示意用，假设以 1GB 为参考或仅展示) */}
+        <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full bg-primary/40 transition-all duration-500"
+            style={{ width: `${Math.min((parseInt(String(vault.size)) / (1024 * 1024 * 1024)) * 100, 100)}%` }}
+          />
+        </div>
+      </div>
+
+      {/* 操作按钮区 */}
+      <footer className="flex items-center justify-between gap-2  mt-auto">
         {editingId === vault.id ? (
-          <div className="flex items-center justify-end gap-1 w-full">
-            <Tooltip content={t("ui.common.save")} side="top" delay={200}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-xl text-green-600 hover:text-green-700 hover:bg-green-50"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  saveEdit(vault)
-                }}
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content={t("ui.common.cancel")} side="top" delay={200}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  cancelEdit()
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </Tooltip>
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-3 rounded-xl text-muted-foreground hover:text-foreground"
+              onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+            >
+              <X className="h-3.5 w-3.5 mr-1.5" />
+              {t("ui.common.cancel")}
+            </Button>
+            <Button
+              size="sm"
+              className="h-8 px-4 rounded-xl bg-green-600 hover:bg-green-700 text-white border-none"
+              onClick={(e) => {
+                e.stopPropagation()
+                saveEdit(vault)
+              }}
+            >
+              <Check className="h-3.5 w-3.5 mr-1.5" />
+              {t("ui.common.save")}
+            </Button>
           </div>
         ) : (
           <>
@@ -217,33 +250,33 @@ function SortableVaultCard({
             </Tooltip>
 
             <div className="flex items-center gap-1">
-              <Tooltip content={t("ui.vault.edit")} side="top" delay={200}>
+              <Tooltip content={t("ui.vault.edit")} side="top">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-xl text-muted-foreground hover:text-green-600"
+                  className="h-8 w-8 rounded-xl text-muted-foreground/60 hover:text-primary hover:bg-primary/5"
                   onClick={(e) => startEdit(vault, e)}
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="h-3.5 w-3.5" />
                 </Button>
               </Tooltip>
-              <Tooltip content={t("ui.vault.delete")} side="top" delay={200}>
+              <Tooltip content={t("ui.vault.delete")} side="top">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive"
+                  className="h-8 w-8 rounded-xl text-muted-foreground/60 hover:text-destructive hover:bg-destructive/5"
                   onClick={(e) => {
                     e.stopPropagation()
                     handleDelete(vault.id)
                   }}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </Tooltip>
             </div>
           </>
         )}
-      </div>
+      </footer>
     </article>
   );
 }
@@ -262,9 +295,12 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
   const [configModalOpen, setConfigModalOpen] = useState(false)
   const [configVaultName, setConfigVaultName] = useState("")
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [tokenCount, setTokenCount] = useState(0)
+  const [onlineCount, setOnlineCount] = useState(0)
 
   const { handleVaultList, handleVaultDelete, handleVaultUpdate } = useVaultHandle()
   const { openConfirmDialog } = useConfirmDialog()
+  const tokenManagerRef = useRef<TokenManagerHandle>(null)
 
   // 拖拽传感器配置
   const sensors = useSensors(
@@ -415,170 +451,208 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
     setConfigModalOpen(true)
   }
 
-
-
-
   return (
-    <div className="w-full space-y-4">
-      {/* 操作栏 */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-1">
-        {/* 左侧：数量显示 */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
-            {t("ui.vault.count", { count: filteredVaults.length })}
-            {searchKeyword && vaults.length !== filteredVaults.length && (
-              <span className="ml-1">/ {t("ui.vault.count", { count: vaults.length })}</span>
-            )}
-          </span>
-        </div>
-
-        {/* 右侧：搜索和操作 */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={t("ui.vault.searchPlaceholder")}
-              className="pl-9 pr-8 rounded-xl"
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-            />
-            {searchKeyword && (
-              <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                onClick={() => setSearchKeyword("")}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-24 lg:pb-4 items-start">
+      {/* 左侧卡片 - 笔记库管理 */}
+      <section className="rounded-xl border border-border bg-card p-6 custom-shadow overflow-hidden">
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold">{t("ui.vault.management") || "笔记库管理"}</h2>
+            <Badge variant="outline" className="h-5 text-[10px] px-1.5 font-medium flex items-center gap-1 bg-muted/50 text-muted-foreground border-border/60">
+              {vaults.length}
+            </Badge>
           </div>
-          <Tooltip content={t("ui.common.refresh")} side="bottom" delay={200}>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => loadVaults(true)}
-              className="h-9 w-9 rounded-xl shrink-0"
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-            </Button>
-          </Tooltip>
-          <Button
-            onClick={() => setIsAdding(true)}
-            className="rounded-xl shrink-0"
-            disabled={isAdding}
-          >
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t("ui.vault.add")}</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* 新增仓库输入框 */}
-      {isAdding && (
-        <div className="rounded-xl border border-primary bg-card p-5">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary shrink-0">
-              <Library className="h-5 w-5" />
-            </span>
-            <Input
-              value={newVaultName}
-              onChange={(e) => setNewVaultName(e.target.value)}
-              placeholder={t("ui.vault.name")}
-              className="flex-1 rounded-xl"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAdd()
-                if (e.key === "Escape") {
-                  setIsAdding(false)
-                  setNewVaultName("")
-                }
-              }}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t("ui.common.save")}
-              className="h-8 w-8 rounded-xl text-green-600 hover:text-green-700 hover:bg-green-50"
-              onClick={handleAdd}
-            >
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t("ui.common.cancel")}
-              className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                setIsAdding(false)
-                setNewVaultName("")
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* 仓库列表 */}
-      {filteredVaults.length === 0 && !isAdding ? (
-        <div className="rounded-xl border border-border bg-card p-12 text-center space-y-4">
-          <p className="text-muted-foreground">
-            {searchKeyword ? t("ui.common.noSearchResults") : t("ui.vault.noVaults")}
-          </p>
-          {!searchKeyword && (
-            <div className="flex flex-col items-center gap-4">
-
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto rounded-xl bg-sky-700 hover:bg-sky-900 text-white hover:text-white transition-colors border-none shadow-sm"
-                onClick={(e) => handleViewConfig("", e)}
-              >
-                <Key className="h-4 w-4 mr-2" />
-                {t("ui.vault.oneClickImport")}
-              </Button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex items-center group/search">
+              <div className={cn(
+                "flex items-center relative transition-all duration-300 ease-in-out overflow-hidden h-9 rounded-xl border border-transparent",
+                searchKeyword 
+                  ? "w-48 border-border bg-muted/50" 
+                  : "w-9 hover:w-48 hover:border-border hover:bg-muted/50 focus-within:w-48 focus-within:border-border focus-within:bg-muted/50"
+              )}>
+                <Input
+                  type="text"
+                  placeholder={t("ui.vault.searchPlaceholder")}
+                  className={cn(
+                    "h-full pl-3 pr-9 border-none bg-transparent focus-visible:ring-0 text-sm w-48 transition-opacity duration-300",
+                    searchKeyword ? "opacity-100" : "opacity-0 group-hover/search:opacity-100 focus-within:opacity-100"
+                  )}
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                />
+                <div className="absolute right-0 w-9 h-9 flex items-center justify-center shrink-0 z-10 pointer-events-none">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                </div>
+                {searchKeyword && (
+                  <button
+                    className="absolute right-8 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-20 animate-in fade-in zoom-in duration-200"
+                    onClick={() => setSearchKeyword("")}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
+            <Tooltip content={t("ui.common.refresh") || "刷新"} side="top" delay={400}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => loadVaults(true)}
+                disabled={isRefreshing}
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+              >
+                <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              </Button>
+            </Tooltip>
+            <Tooltip content={t("ui.vault.add") || "新增"} side="top" delay={400}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsAdding(true)}
+                disabled={isAdding}
+                className="h-8 w-8 rounded-lg text-primary hover:bg-primary/5"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          </div>
+        </header>
+
+        {/* 新增仓库输入框 */}
+        {isAdding && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-3">
+              <Input
+                value={newVaultName}
+                onChange={(e) => setNewVaultName(e.target.value)}
+                placeholder={t("ui.vault.name")}
+                className="h-9 flex-1 rounded-xl"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd()
+                  if (e.key === "Escape") {
+                    setIsAdding(false)
+                    setNewVaultName("")
+                  }
+                }}
+              />
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={handleAdd}>
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsAdding(false); setNewVaultName(""); }}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 笔记库列表 */}
+        <div className="min-h-[300px]">
+          {filteredVaults.length === 0 ? (
+            <div className="flex flex-col items-center justify-center min-h-[300px] text-muted-foreground border-2 border-dashed border-border/50 rounded-xl bg-muted/5">
+              <Library className="h-12 w-12 mb-3 opacity-20" />
+              <p className="text-sm opacity-70 mb-4">
+                {searchKeyword ? t("ui.common.noSearchResults") : t("ui.vault.noVaults")}
+              </p>
+              {!searchKeyword && vaults.length === 0 && (
+                <Button
+                  variant="outline"
+                  className="rounded-xl bg-sky-700 hover:bg-sky-900 text-white hover:text-white transition-colors border-none shadow-sm"
+                  onClick={(e) => handleViewConfig("", e)}
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  {t("ui.vault.oneClickImport")}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={filteredVaults.map((v) => v.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {filteredVaults.map((vault) => (
+                    <SortableVaultCard
+                      key={vault.id}
+                      vault={vault}
+                      editingId={editingId}
+                      editingName={editingName}
+                      setEditingName={setEditingName}
+                      startEdit={startEdit}
+                      saveEdit={saveEdit}
+                      cancelEdit={cancelEdit}
+                      handleDelete={handleDelete}
+                      onViewConfig={handleViewConfig}
+                      onNavigateToNotes={onNavigateToNotes}
+                      onNavigateToAttachments={onNavigateToAttachments}
+                      formatBytes={formatBytes}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={filteredVaults.map((v) => v.id)}
-            strategy={rectSortingStrategy}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-1">
-              {filteredVaults.map((vault) => (
-                <SortableVaultCard
-                  key={vault.id}
-                  vault={vault}
-                  editingId={editingId}
-                  editingName={editingName}
-                  setEditingName={setEditingName}
-                  startEdit={startEdit}
-                  saveEdit={saveEdit}
-                  cancelEdit={cancelEdit}
-                  handleDelete={handleDelete}
-                  onViewConfig={handleViewConfig}
-                  onNavigateToNotes={onNavigateToNotes}
-                  onNavigateToAttachments={onNavigateToAttachments}
-                  formatBytes={formatBytes}
-                  t={t}
-                />
-              ))}
+      </section>
+
+      {/* 右侧卡片 - 令牌管理 */}
+      <section className="space-y-4 lg:sticky lg:top-4 h-full">
+        <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card/30 p-1 custom-shadow backdrop-blur-sm min-h-[500px] max-h-[calc(100vh-120px)] overflow-hidden">
+          <div className="flex items-center justify-between px-5 pt-5 pb-2">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-xl font-black tracking-tight">{t("ui.vault.authTokenConfig") || "授权令牌"}</h2>
+              <div className="flex items-center gap-1.5 ml-1">
+                <Badge variant="outline" className="h-5 text-[10px] px-1.5 font-bold flex items-center gap-1 bg-muted/50 text-muted-foreground border-border/60" title={t("ui.token.totalTokens")}>
+                  {tokenCount}
+                </Badge>
+                {onlineCount > 0 && (
+                  <Badge variant="outline" className="h-5 text-[10px] px-1.5 font-bold flex items-center gap-1 bg-emerald-500/10 text-emerald-500 border-emerald-500/20" title={t("ui.token.onlineDevices")}>
+                    <Wifi className="h-3 w-3 animate-pulse" />
+                    {onlineCount}
+                  </Badge>
+                )}
+              </div>
             </div>
-          </SortableContext>
-        </DndContext>
-      )}
+
+            <div className="flex items-center gap-1">
+              <Tooltip content={t("ui.common.refresh") || "刷新"} side="top" delay={400}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => tokenManagerRef.current?.refresh()}
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content={t("ui.token.createTitle") || "创建令牌"} side="top" delay={400}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => tokenManagerRef.current?.openCreate()}
+                  className="h-8 w-8 rounded-lg text-primary hover:bg-primary/5"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto px-5 pb-8 scrollbar-thin">
+            <TokenManager ref={tokenManagerRef} isCompact onCountChange={setTokenCount} onOnlineCountChange={setOnlineCount} />
+          </div>
+
+        </div>
+      </section>
+
 
       {/* 配置模态窗口 */}
-      <ObsidianAuthModal 
-        open={configModalOpen} 
-        onOpenChange={setConfigModalOpen} 
-        vaultName={configVaultName} 
+      <ObsidianAuthModal
+        open={configModalOpen}
+        onOpenChange={setConfigModalOpen}
+        vaultName={configVaultName}
+        onSuccess={() => tokenManagerRef.current?.refresh()}
       />
     </div>
   )

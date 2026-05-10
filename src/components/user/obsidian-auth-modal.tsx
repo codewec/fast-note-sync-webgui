@@ -1,19 +1,21 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Clipboard, ExternalLink, Loader2, Key } from "lucide-react";
 import { useTokenHandle } from "@/components/api-handle/token-handle";
+import { Clipboard, ExternalLink, Loader2, Key } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
+import { toast } from "@/components/common/Toast";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
-import { toast } from "@/components/common/Toast";
 import env from "@/env.ts";
+
 
 interface ObsidianAuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   vaultName?: string;
+  onSuccess?: () => void;
 }
 
-export function ObsidianAuthModal({ open, onOpenChange, vaultName }: ObsidianAuthModalProps) {
+export function ObsidianAuthModal({ open, onOpenChange, vaultName, onSuccess }: ObsidianAuthModalProps) {
   const { t } = useTranslation();
   const { handleCreateToken, isLoading } = useTokenHandle();
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
@@ -31,6 +33,7 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName }: ObsidianAut
     if (token) {
       setGeneratedToken(token);
       toast.success(t("ui.common.success"));
+      onSuccess?.();
     } else {
       toast.error(t("ui.common.error"));
     }
@@ -77,7 +80,7 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName }: ObsidianAut
             {vaultName && <span className="text-muted-foreground font-normal ml-1">- {vaultName}</span>}
           </DialogTitle>
           <DialogDescription>
-            {t("ui.obsidian.generateTokenDesc") || "为 Obsidian 插件生成一个具有完整同步权限的专用令牌。"}
+            {t("ui.obsidian.generateTokenDesc") || "为 Obsidian 插件生成一个具有完整同步权限的专用授权令牌。"}
           </DialogDescription>
         </DialogHeader>
 
@@ -89,11 +92,11 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName }: ObsidianAut
             <div className="text-center space-y-2">
               <h3 className="font-bold text-lg">{t("ui.obsidian.tokenRequired") || "需要授权令牌"}</h3>
               <p className="text-sm text-muted-foreground max-w-xs">
-                {t("ui.obsidian.tokenPrompt") || "点击下方按钮生成一个专用的安全令牌，用于在 Obsidian 中进行同步。"}
+                {t("ui.obsidian.tokenPrompt") || "点击下方按钮生成一个专用的授权令牌，用于在 Obsidian 中进行同步。"}
               </p>
             </div>
-            <Button 
-              onClick={onGenerate} 
+            <Button
+              onClick={onGenerate}
               disabled={isLoading}
               className="rounded-xl h-11 px-8 font-bold shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
             >

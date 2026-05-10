@@ -23,7 +23,7 @@ export function MainContent({ children, className }: MainContentProps) {
   const isMobile = useMobile()
 
   // 设置页面、概况页面和同步页面不需要外层卡片容器
-  const isPlainPage = currentModule === 'dashboard' || currentModule === 'sync' || currentModule === 'git' || currentModule === 'config'
+  const isPlainPage = currentModule === 'dashboard' || currentModule === 'sync' || currentModule === 'git' || currentModule === 'config' || currentModule === 'vaults'
 
   return (
     <main
@@ -40,11 +40,11 @@ export function MainContent({ children, className }: MainContentProps) {
           {children}
         </div>
       ) : (
-        <div className="bg-card rounded-lg sm:rounded-xl border border-sidebar-border custom-shadow p-3 sm:p-6 md:p-5 min-h-full">
-          <div className="px-1">
-            {children}
+          <div className="bg-card rounded-lg sm:rounded-xl border border-sidebar-border custom-shadow p-3 sm:p-6 md:p-5 min-h-full">
+            <div className="px-1">
+              {children}
+            </div>
           </div>
-        </div>
       )}
     </main>
   )

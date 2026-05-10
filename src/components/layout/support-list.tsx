@@ -156,33 +156,35 @@ export function SupportList() {
                             const tooltipContent = `${record.name || "Anonymous"}: ${record.message || record.item}`;
 
                             return (
-                                <Tooltip
-                                    key={index}
-                                    side="left"
-                                    delay={300}
-                                    content={tooltipContent}
-                                    className="max-w-75 whitespace-normal"
-                                >
-                                    <div className="grid grid-cols-[80px_1fr_80px] gap-2 px-3 py-2 items-center hover:bg-primary/5 transition-colors cursor-default text-[11px]">
-                                        <div className="text-muted-foreground font-mono tabular-nums whitespace-nowrap overflow-hidden text-ellipsis opacity-70">
-                                            {(record.time || "").split(' ')[0] || "N/A"}
-                                        </div>
-                                        <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-                                            <Smile className="h-3 w-3 text-primary/60 shrink-0" />
-                                            <span className="font-medium shrink-0 max-w-20 truncate">
-                                                {record.name || "Anonymous"}
-                                            </span>
-                                            {record.message && (
-                                                <span className="text-muted-foreground truncate text-[10px] opacity-70 border-l border-border/50 pl-1.5">
-                                                    {record.message}
+                                <div key={index} className="w-full block">
+                                    <Tooltip
+                                        side="left"
+                                        delay={300}
+                                        content={tooltipContent}
+                                        className="max-w-75 whitespace-normal"
+                                        triggerClassName="w-full"
+                                    >
+                                        <div className="grid grid-cols-[80px_1fr_80px] gap-2 px-3 py-2 items-center hover:bg-primary/5 transition-colors cursor-default text-[11px] w-full">
+                                            <div className="text-muted-foreground font-mono tabular-nums whitespace-nowrap overflow-hidden text-ellipsis opacity-70">
+                                                {(record.time || "").split(' ')[0] || "N/A"}
+                                            </div>
+                                            <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                                                <Smile className="h-3 w-3 text-primary/60 shrink-0" />
+                                                <span className="font-medium shrink-0 max-w-20 truncate">
+                                                    {record.name || "Anonymous"}
                                                 </span>
-                                            )}
+                                                {record.message && (
+                                                    <span className="text-muted-foreground truncate text-[10px] opacity-70 border-l border-border/50 pl-1.5">
+                                                        {record.message}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-right font-bold text-primary tabular-nums">
+                                                {record.amount} <span className="text-[9px] opacity-70 font-normal ml-0.5">{record.unit}</span>
+                                            </div>
                                         </div>
-                                        <div className="text-right font-bold text-primary tabular-nums">
-                                            {record.amount} <span className="text-[9px] opacity-70 font-normal ml-0.5">{record.unit}</span>
-                                        </div>
-                                    </div>
-                                </Tooltip>
+                                    </Tooltip>
+                                </div>
                             );
                         })}
                     </div>

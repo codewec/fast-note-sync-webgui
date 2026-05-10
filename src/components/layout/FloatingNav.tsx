@@ -81,7 +81,7 @@ export function FloatingNav({ isAdmin, className }: FloatingNavProps) {
       { id: "vaults", icon: Library, labelKey: "ui.nav.menuVaults" },
       { id: "notes", icon: NotepadText, labelKey: "ui.nav.menuNotes" },
       { id: "files", icon: Paperclip, labelKey: "ui.nav.menuFiles" },
-      { id: "tokens", icon: ShieldCheck, labelKey: "ui.nav.menuTokens" },
+
       { id: "trash", icon: ArchiveX, labelKey: "ui.nav.menuTrash" },
       { id: "settings", icon: FileJson, labelKey: "ui.nav.menuSettingsBrowser" },
       { id: "sync-logs", icon: Logs, labelKey: "ui.nav.menuSyncLogs" },

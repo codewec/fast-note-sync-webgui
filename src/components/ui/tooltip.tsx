@@ -21,6 +21,8 @@ interface TooltipProps {
   disabled?: boolean
   /** 额外的 CSS 类名 */
   className?: string
+  /** 触发元素的额外 CSS 类名 */
+  triggerClassName?: string
 }
 
 /**
@@ -34,6 +36,7 @@ export function Tooltip({
   align = "center",
   disabled = false,
   className,
+  triggerClassName,
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
   const timerRef = useRef<number | null>(null)
@@ -197,6 +200,7 @@ export function Tooltip({
 
   return (
     <div
+      className={cn("inline-flex items-center", triggerClassName)}
       ref={triggerRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
