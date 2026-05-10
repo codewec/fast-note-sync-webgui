@@ -37,7 +37,7 @@ function App() {
   const { t } = useTranslation()
   const { isLoggedIn, login, logout } = useAuth()
   const { handleVaultList } = useVaultHandle()
-  const { handleUserInfo } = useUserHandle()
+  const { handleUserInfo, handleLogout: apiLogout } = useUserHandle()
 
   const currentModule = useAppStore(state => state.currentModule)
   const setModule = useAppStore(state => state.setModule)
@@ -207,9 +207,10 @@ function App() {
   }, [login])
 
   const handleLogout = useCallback(() => {
+    void apiLogout()
     logout()
     resetState()
-  }, [logout, resetState])
+  }, [logout, resetState, apiLogout])
 
   const handleToggleZenMode = useCallback(() => {
     setZenMode(!zenMode)

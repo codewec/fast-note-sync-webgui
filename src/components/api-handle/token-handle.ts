@@ -152,6 +152,52 @@ export function useTokenHandle() {
     }
   }, [token]);
 
+  const handleUpdateToken = useCallback(async (
+    tokenId: number,
+    clientType: string,
+    scope: string,
+    expiredDays: number,
+    boundIp?: string,
+    userAgent?: string,
+    protocol?: string,
+    client?: string,
+    functionScope?: string
+  ) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(addCacheBuster(env.API_URL + `/api/token/${tokenId}`), {
+        method: "PUT",
+        headers: buildApiHeaders({ token }),
+        body: JSON.stringify({
+          clientType,
+          scope,
+          expiredDays,
+          boundIp,
+          userAgent,
+          protocol,
+          client,
+          function: functionScope,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update token");
+      }
+
+      const res = await response.json();
+      if (res.code > 0) {
+        handleListTokens();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error("Update token failed", e);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, handleListTokens]);
+
   const currentTokenID = useMemo(() => {
     if (!token) return null;
     try {
@@ -177,6 +223,7 @@ export function useTokenHandle() {
     handleListTokens,
     handleRevokeToken,
     handleCreateToken,
+    handleUpdateToken,
     handleFetchTokenLogs
-  }), [tokens, isLoading, currentTokenID, handleListTokens, handleRevokeToken, handleCreateToken, handleFetchTokenLogs]);
+  }), [tokens, isLoading, currentTokenID, handleListTokens, handleRevokeToken, handleCreateToken, handleUpdateToken, handleFetchTokenLogs]);
 }

@@ -1,4 +1,4 @@
-import { ShieldCheck, Smartphone, Monitor, RefreshCw, Trash2, Clock, Globe, ShieldAlert, Plus, Key, Copy, Check, Terminal, FileText, ChevronLeft, ChevronRight, History } from "lucide-react";
+import { ShieldCheck, Smartphone, Monitor, RefreshCw, Trash2, Clock, Globe, ShieldAlert, Plus, Key, Copy, Check, Terminal, FileText, ChevronLeft, ChevronRight, History, Activity, LogIn, UserPlus, CheckCircle2, Zap, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 
 export function TokenManager() {
   const { t } = useTranslation();
-  const { tokens, isLoading, currentTokenID, handleListTokens, handleRevokeToken, handleCreateToken, handleFetchTokenLogs } = useTokenHandle();
+  const { tokens, isLoading, currentTokenID, handleListTokens, handleRevokeToken, handleCreateToken, handleUpdateToken, handleFetchTokenLogs } = useTokenHandle();
   const [revokingId, setRevokingId] = useState<number | null>(null);
   
   // Token Log View State
@@ -41,8 +41,11 @@ export function TokenManager() {
   const [isLogLoading, setIsLogLoading] = useState(false);
   const LOG_PAGE_SIZE = 10;
   
-  // Create token dialog state
+  // Create/Edit token dialog state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingTokenId, setEditingTokenId] = useState<number | null>(null);
+  
   const [newClientType, setNewClientType] = useState("Other");
   const [newProtocols, setNewProtocols] = useState<string[]>(["rest", "ws"]);
   const [newClientDim, setNewClientDim] = useState("*");
@@ -75,6 +78,37 @@ export function TokenManager() {
     fetchLogs(id, 1);
   };
 
+  const onOpenEdit = (token: any) => {
+    setEditingTokenId(token.id);
+    setIsEditMode(true);
+    setNewClientType(token.clientType);
+    setNewBoundIp(token.boundIp);
+    setNewUserAgent(token.userAgent);
+    
+    // Parse scope
+    const parts = token.scope.split(" ");
+    let p = ["rest", "ws"];
+    let c = "*";
+    let f = [] as string[];
+    
+    parts.forEach((part: string) => {
+      if (part.startsWith("p:")) p = part.substring(2).split(",").filter(i => i);
+      if (part.startsWith("c:")) c = part.substring(2);
+      if (part.startsWith("f:")) f = part.substring(2) === "*" ? [] : part.substring(2).split(",").filter(i => i);
+    });
+    
+    setNewProtocols(p);
+    setNewClientDim(c);
+    setNewFuncDims(f);
+    
+    // Expires: Calculate days from now
+    const expiresAt = new Date(token.expiredAt);
+    const diff = Math.ceil((expiresAt.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+    setNewExpiresDays(diff > 0 ? diff : 30);
+    
+    setIsCreateOpen(true);
+  };
+
   const fetchLogs = async (id: number, page: number) => {
     setIsLogLoading(true);
     const res = await handleFetchTokenLogs(id, page, LOG_PAGE_SIZE);
@@ -92,25 +126,46 @@ export function TokenManager() {
     }
   };
 
-  const onCreateToken = async () => {
+  const onSubmitToken = async () => {
     const protocolStr = newProtocols.length === 0 ? "*" : newProtocols.join(",");
     const funcStr = newFuncDims.length === 0 ? "*" : newFuncDims.join(",");
-    const token = await handleCreateToken(
-      newClientType.trim(), 
-      protocolStr, 
-      newExpiresDays, 
-      newBoundIp.trim(), 
-      newUserAgent.trim(),
-      protocolStr,
-      newClientDim.trim(),
-      funcStr
-    );
-    if (token) {
-      setGeneratedToken(token);
-      handleListTokens();
-      toast.success(t("ui.common.success"));
+    
+    if (isEditMode && editingTokenId) {
+      const success = await handleUpdateToken(
+        editingTokenId,
+        newClientType.trim(),
+        "", // Scope is handled by components if needed, or leave blank to use dimensions
+        newExpiresDays,
+        newBoundIp.trim(),
+        newUserAgent.trim(),
+        protocolStr,
+        newClientDim.trim(),
+        funcStr
+      );
+      if (success) {
+        toast.success(t("ui.common.success"));
+        closeCreateDialog();
+      } else {
+        toast.error(t("ui.common.error"));
+      }
     } else {
-      toast.error(t("ui.common.error"));
+      const token = await handleCreateToken(
+        newClientType.trim(), 
+        "", 
+        newExpiresDays, 
+        newBoundIp.trim(), 
+        newUserAgent.trim(),
+        protocolStr,
+        newClientDim.trim(),
+        funcStr
+      );
+      if (token) {
+        setGeneratedToken(token);
+        handleListTokens();
+        toast.success(t("ui.common.success"));
+      } else {
+        toast.error(t("ui.common.error"));
+      }
     }
   };
 
@@ -126,6 +181,8 @@ export function TokenManager() {
 
   const closeCreateDialog = () => {
     setIsCreateOpen(false);
+    setIsEditMode(false);
+    setEditingTokenId(null);
     setGeneratedToken(null);
     setNewClientType("Other");
     setNewProtocols(["rest", "ws"]);
@@ -208,10 +265,10 @@ export function TokenManager() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Key className="h-5 w-5 text-primary" />
-              {t("ui.token.createTitle") || "创建新令牌"}
+              {isEditMode ? (t("ui.token.editTitle") || "编辑令牌") : (t("ui.token.createTitle") || "创建新令牌")}
             </DialogTitle>
             <DialogDescription>
-              {t("ui.token.createDesc") || "手动创建一个具有特定权限和有效期的 API 访问令牌。"}
+              {isEditMode ? (t("ui.token.editDesc") || "修改现有令牌的权限和有效期设置。") : (t("ui.token.createDesc") || "手动创建一个具有特定权限和有效期的 API 访问令牌。")}
             </DialogDescription>
           </DialogHeader>
 
@@ -381,7 +438,7 @@ export function TokenManager() {
                 <Button variant="ghost" onClick={closeCreateDialog} className="rounded-xl">
                   {t("ui.common.cancel")}
                 </Button>
-                <Button onClick={onCreateToken} disabled={isLoading} className="rounded-xl px-8">
+                <Button onClick={onSubmitToken} disabled={isLoading} className="rounded-xl px-8">
                   {isLoading && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
                   {t("ui.common.confirm")}
                 </Button>
@@ -418,39 +475,36 @@ export function TokenManager() {
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-lg">{token.clientType}</h3>
-                        <Badge variant="outline" className={cn(
-                          "text-[10px] px-1.5 h-4 border-none",
-                          token.issueType === 1 ? "bg-amber-500/10 text-amber-500" : "bg-blue-500/10 text-blue-500"
-                        )}>
+                        <Badge variant="outline" className="h-5 text-[10px] px-1.5 font-medium flex items-center gap-1 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                          {token.issueType === 1 ? <Globe className="h-3 w-3" /> : <UserPlus className="h-3 w-3" />}
                           {token.issueType === 1 ? (t("ui.token.issueTypeLogin") || "登录") : (t("ui.token.issueTypeManual") || "手动")}
                         </Badge>
                         {token.id === currentTokenID && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 h-4 bg-primary text-primary-foreground border-none">
+                          <Badge variant="outline" className="h-5 text-[10px] px-1.5 font-medium flex items-center bg-emerald-500/10 text-emerald-500 border-emerald-500/20 gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
                             {t("ui.token.current") || "当前会话"}
                           </Badge>
                         )}
                         {token.isWsOnline && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 h-4 bg-emerald-500 text-white border-none flex items-center gap-1">
+                          <Badge variant="outline" className="h-5 text-[10px] px-1.5 font-medium flex items-center bg-emerald-500 text-white border-white/20 gap-1">
+                            <Zap className="h-3 w-3 fill-current" />
                             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                             {t("ui.token.wsOnline") || "WS在线"}
                           </Badge>
                         )}
                         {isExpired(token.expiredAt) ? (
-                          <Badge variant="destructive" className="text-[10px]">{t("ui.token.statusExpired") || "已过期"}</Badge>
+                          <Badge variant="destructive" className="h-5 text-[10px] px-1.5 font-medium flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            {t("ui.token.statusExpired") || "已过期"}
+                          </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20">{t("ui.token.statusActive") || "活跃中"}</Badge>
+                          <Badge variant="outline" className="h-5 text-[10px] px-1.5 font-medium flex items-center bg-muted/30 text-muted-foreground border-border/60 gap-1">
+                            <Activity className="h-3 w-3 text-muted-foreground/60" />
+                            {t("ui.token.lastUsedAt")}: {token.lastUsedAt && !token.lastUsedAt.startsWith("0001") ? new Date(token.lastUsedAt).toLocaleString() : (t("ui.common.never") || "从未")}
+                          </Badge>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <Globe className="h-3.5 w-3.5 opacity-60" />
-                          <span className="font-mono">{token.boundIp}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 max-w-[300px] truncate">
-                          <Monitor className="h-3.5 w-3.5 opacity-60" />
-                          <span className="truncate">{token.userAgent}</span>
-                        </div>
-                      </div>
+
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground/70 pt-1">
                         <div className="flex items-center gap-1.5">
                           <ShieldCheck className="h-3 w-3" />
@@ -460,10 +514,7 @@ export function TokenManager() {
                           <Clock className="h-3 w-3" />
                           <span>{t("ui.common.createdAt")}: {new Date(token.createdAt).toLocaleString()}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <RefreshCw className="h-3 w-3 text-primary/70" />
-                          <span>{t("ui.token.lastUsedAt")}: {token.lastUsedAt && !token.lastUsedAt.startsWith("0001") ? new Date(token.lastUsedAt).toLocaleString() : (t("ui.common.never") || "从未使用")}</span>
-                        </div>
+
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-3 w-3 text-amber-500/70" />
                           <span>{t("ui.token.expiresAt") || "过期时间"}: {new Date(token.expiredAt).toLocaleString()}</span>
@@ -482,6 +533,17 @@ export function TokenManager() {
                       <History className="h-4 w-4 mr-2" />
                       {t("ui.token.logsTitle") || "日志"}
                     </Button>
+                    {token.issueType === 2 && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-lg h-9"
+                        onClick={() => onOpenEdit(token)}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        {t("ui.common.edit") || "编辑"}
+                      </Button>
+                    )}
                     <Button 
                       variant="outline" 
                       size="sm" 

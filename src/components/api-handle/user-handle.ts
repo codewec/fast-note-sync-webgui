@@ -37,6 +37,19 @@ export function useUserHandle() {
   }, [token, t])
 
 
+  const handleLogout = useCallback(async () => {
+    if (!token) return
+    try {
+      await fetch(addCacheBuster(env.API_URL + "/api/auth/logout"), {
+        method: "POST",
+        headers: buildApiHeaders({ token }),
+      })
+    } catch (e) {
+      console.error("Logout request failed", e)
+    }
+  }, [token])
+
+
   const handleUserChangePassword = useCallback(async (data: ChangePassword, callback: (data2: ChangePassword) => void) => {
 
     const formData = { ...data }
@@ -61,6 +74,6 @@ export function useUserHandle() {
 
 
   return useMemo(() => ({
-    handleUserChangePassword, handleUserInfo
-  }), [handleUserChangePassword, handleUserInfo])
+    handleUserChangePassword, handleUserInfo, handleLogout
+  }), [handleUserChangePassword, handleUserInfo, handleLogout])
 }
