@@ -12,8 +12,9 @@ import { create } from 'zustand';
  * - settings: 设置（仅管理员）
  * - sync: 远端备份（计划中）
  * - git: Git 自动化（计划中）
+ * - tokens: 令牌管理
  */
-export type ModuleId = 'dashboard' | 'vaults' | 'notes' | 'files' | 'trash' | 'config' | 'sync' | 'git' | 'settings' | 'sync-logs';
+export type ModuleId = 'dashboard' | 'vaults' | 'notes' | 'files' | 'trash' | 'config' | 'sync' | 'git' | 'settings' | 'sync-logs' | 'tokens';
 
 /**
  * 应用状态接口

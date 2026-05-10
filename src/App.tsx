@@ -24,6 +24,7 @@ const GitAutomation = lazy(() => import("@/components/layout/git-automation").th
 const SettingManager = lazy(() => import("@/components/setting/setting-manager").then(m => ({ default: m.SettingManager })));
 const SyncLogManager = lazy(() => import("@/components/sync-log/sync-log-manager").then(m => ({ default: m.SyncLogManager })));
 const AdminSetupDialog = lazy(() => import("@/components/user/admin-setup-dialog").then(m => ({ default: m.AdminSetupDialog })));
+const TokenManager = lazy(() => import("@/components/user/token-manager").then(m => ({ default: m.TokenManager })));
 
 // 加载占位符
 const PageLoading = () => (
@@ -337,6 +338,9 @@ function App() {
             onVaultChange={setActiveVault}
           />
         )
+
+      case "tokens":
+        return <TokenManager />
 
       case "vaults":
       default:

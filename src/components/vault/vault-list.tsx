@@ -1,7 +1,7 @@
-import { Pencil, Trash2, Plus, Clipboard, Library, Clock, RefreshCw, Check, X, Search, GripVertical, ExternalLink, Cable } from "lucide-react";
+import { Pencil, Trash2, Plus, Key, Library, Clock, RefreshCw, Check, X, Search, GripVertical } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, rectSortingStrategy } from "@dnd-kit/sortable";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 import { useConfirmDialog } from "@/components/context/confirm-dialog-context";
 import { useVaultHandle } from "@/components/api-handle/vault-handle";
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { VaultType } from "@/lib/types/vault";
 import { Input } from "@/components/ui/input";
 import { CSS } from "@dnd-kit/utilities";
-import env from "@/env.ts";
+import { ObsidianAuthModal } from "@/components/user/obsidian-auth-modal";
 
 
 interface VaultListProps {
@@ -211,7 +211,7 @@ function SortableVaultCard({
                 className="h-8 px-3 rounded-xl bg-sky-700 hover:bg-sky-900 text-white transition-colors border-none shadow-sm flex items-center gap-1.5"
                 onClick={(e) => onViewConfig(vault.vault, e)}
               >
-                <Cable className="h-4 w-4" />
+                <Key className="h-4 w-4" />
                 <span className="text-xs font-medium">{t("ui.vault.authTokenConfig")}</span>
               </Button>
             </Tooltip>
@@ -260,7 +260,6 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
   const [newVaultName, setNewVaultName] = useState("")
   const [searchKeyword, setSearchKeyword] = useState("")
   const [configModalOpen, setConfigModalOpen] = useState(false)
-  const [configModalIsError, setConfigModalIsError] = useState(false)
   const [configVaultName, setConfigVaultName] = useState("")
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -413,42 +412,10 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
   const handleViewConfig = (vaultName: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setConfigVaultName(vaultName)
-    setConfigModalIsError(false)
     setConfigModalOpen(true)
   }
 
-  // 获取配置 JSON
-  const getConfigJson = useCallback((vaultName?: string) => {
-    return JSON.stringify({
-      api: env.API_URL,
-      apiToken: localStorage.getItem("token") || "",
-      ...(vaultName ? { vault: vaultName } : {}),
-    }, null, 2)
-  }, [])
 
-  const getObsidianUrl = useCallback((vaultName?: string) => {
-    const api = env.API_URL;
-    const apiToken = localStorage.getItem("token") || "";
-    const vault = vaultName || configVaultName;
-    return `obsidian://fast-note-sync/sso?pushApi=${encodeURIComponent(api)}&pushApiToken=${encodeURIComponent(apiToken)}&pushVault=${encodeURIComponent(vault)}`;
-  }, [configVaultName]);
-
-  // 复制配置（用于模态窗口）
-  const handleCopyConfig = () => {
-    const configText = getConfigJson(configVaultName)
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(configText)
-        .then(() => {
-          toast.success(t("ui.vault.copyConfigSuccess"))
-        })
-        .catch((err) => {
-          toast.error(t("ui.common.error") + err)
-        })
-    } else {
-      toast.error(t("ui.vault.copyConfigError"))
-    }
-  }
 
 
   return (
@@ -567,7 +534,7 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
                 className="w-full sm:w-auto rounded-xl bg-sky-700 hover:bg-sky-900 text-white hover:text-white transition-colors border-none shadow-sm"
                 onClick={(e) => handleViewConfig("", e)}
               >
-                <Clipboard className="h-4 w-4 mr-2" />
+                <Key className="h-4 w-4 mr-2" />
                 {t("ui.vault.oneClickImport")}
               </Button>
             </div>
@@ -608,41 +575,11 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
       )}
 
       {/* 配置模态窗口 */}
-      <Dialog open={configModalOpen} onOpenChange={setConfigModalOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl mx-auto rounded-lg sm:rounded-xl">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg truncate pr-8">
-              {configModalIsError ? t("ui.vault.copyConfigError") : t("ui.vault.authTokenConfig")}
-              {configVaultName && ` - ${configVaultName}`}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <pre className="p-3 sm:p-4 rounded-xl bg-muted text-xs sm:text-sm overflow-x-auto max-h-48 sm:max-h-64 font-mono whitespace-pre-wrap break-all">
-              {getConfigJson(configVaultName)}
-            </pre>
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 text-nowrap">
-              <Button variant="outline" onClick={() => setConfigModalOpen(false)} className="w-full sm:w-auto rounded-xl">
-                {t("ui.common.close")}
-              </Button>
-              <Button
-                className="w-full sm:w-auto rounded-xl bg-sky-700 hover:bg-sky-900 text-white transition-colors border-none shadow-sm"
-                onClick={() => {
-                  window.location.href = getObsidianUrl();
-                }}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                {t("ui.vault.oneClickImport")}
-              </Button>
-
-              <Button onClick={handleCopyConfig} className="w-full sm:w-auto rounded-xl">
-                <Clipboard className="h-4 w-4 mr-2" />
-                {t("ui.vault.copyConfig")}
-              </Button>
-
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ObsidianAuthModal 
+        open={configModalOpen} 
+        onOpenChange={setConfigModalOpen} 
+        vaultName={configVaultName} 
+      />
     </div>
   )
 }
