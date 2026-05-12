@@ -1,4 +1,4 @@
-import { ShieldCheck, Smartphone, Monitor, RefreshCw, Trash2, Clock, Globe, ShieldAlert, Plus, Key, Copy, Check, Terminal, FileText, ChevronLeft, ChevronRight, History, Activity, MoreVertical } from "lucide-react";
+import { ShieldCheck, Smartphone, Monitor, RefreshCw, Trash2, Clock, Globe, ShieldAlert, Plus, Key, Copy, Check, Terminal, FileText, ChevronLeft, ChevronRight, History, Activity, MoreVertical, HelpCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
@@ -335,141 +335,172 @@ export const TokenManager = forwardRef<TokenManagerHandle, TokenManagerProps>(
             </DialogHeader>
 
             {!generatedToken ? (
-              <div className="space-y-5 py-4">
+              <div className="grid grid-cols-2 gap-x-5 gap-y-4 py-4">
+                {/* 第一行：备注名称 和 客户端限制 */}
                 <div className="space-y-2">
                   <Label htmlFor="clientType" className="text-sm font-bold text-muted-foreground flex items-center gap-2">
                     <FileText className="h-3 w-3" />
-                    {t("ui.token.name")}
+                    <span className="flex items-center gap-1">
+                      {t("ui.token.name")}
+                      <Tooltip content={t("ui.token.nameHelp")}>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                      </Tooltip>
+                    </span>
                   </Label>
                   <Input
                     id="clientType"
                     value={newClientType}
                     onChange={(e) => setNewClientType(e.target.value)}
                     placeholder="e.g. Obsidian-Mobile, MyServer"
-                    className="rounded-xl"
+                    className="rounded-xl h-9"
                   />
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="clientDim" className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                    <Smartphone className="h-3 w-3" />
+                    <span className="flex items-center gap-1">
+                      {t("ui.token.clientType")}
+                      <Tooltip content={t("ui.token.clientTypeHelp")}>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                      </Tooltip>
+                    </span>
+                  </Label>
+                  <Input
+                    id="clientDim"
+                    value={newClientDim}
+                    onChange={(e) => setNewClientDim(e.target.value)}
+                    placeholder="e.g. ObsidianPlugin, *"
+                    className="rounded-xl h-9"
+                  />
+                </div>
+
+                {/* 第二行：协议限制 和 有效期 */}
+                <div className="space-y-2">
                   <Label className="text-sm font-bold text-muted-foreground flex items-center gap-2">
                     <Terminal className="h-3 w-3" />
-                    {t("ui.token.protocol")}
+                    <span className="flex items-center gap-1">
+                      {t("ui.token.protocol")}
+                      <Tooltip content={t("ui.token.protocolHelp")}>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                      </Tooltip>
+                    </span>
                   </Label>
-                  <div className="flex flex-wrap gap-4 p-3 rounded-xl bg-muted/50 border border-border">
+                  <div className="flex flex-wrap items-center gap-3 p-2 px-3 rounded-xl bg-muted/50 border border-border h-9">
                     {["rest", "ws", "mcp"].map((p) => (
-                      <div key={p} className="flex items-center space-x-2">
+                      <div key={p} className="flex items-center space-x-1.5">
                         <Checkbox
                           id={`p-${p}`}
                           checked={newProtocols.includes(p)}
                           onCheckedChange={() => toggleProtocol(p)}
+                          className="h-3.5 w-3.5"
                         />
-                        <Label htmlFor={`p-${p}`} className="capitalize cursor-pointer">{p}</Label>
+                        <Label htmlFor={`p-${p}`} className="capitalize cursor-pointer text-xs">{p}</Label>
                       </div>
                     ))}
-                    <div className="flex items-center space-x-2 border-l pl-4 border-border/50">
+                    <div className="flex items-center space-x-1.5 border-l pl-3 border-border/50 h-4">
                       <Checkbox
                         id="p-all"
                         checked={newProtocols.length === 0}
                         onCheckedChange={(checked) => checked ? setNewProtocols([]) : setNewProtocols(["rest", "ws"])}
+                        className="h-3.5 w-3.5"
                       />
-                      <Label htmlFor="p-all" className="cursor-pointer font-bold">{t("ui.common.unrestricted") || "不限制"}</Label>
+                      <Label htmlFor="p-all" className="cursor-pointer font-bold text-xs">{t("ui.common.unrestricted") || "不限制"}</Label>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="clientDim" className="text-sm font-bold text-muted-foreground flex items-center gap-2">
-                      <Smartphone className="h-3 w-3" />
-                      {t("ui.token.clientType")}
-                    </Label>
-                    <Input
-                      id="clientDim"
-                      value={newClientDim}
-                      onChange={(e) => setNewClientDim(e.target.value)}
-                      placeholder="e.g. ObsidianPlugin, *"
-                      className="rounded-xl"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expires" className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                    <Clock className="h-3 w-3" />
+                    {t("ui.token.expiresDays")}
+                  </Label>
+                  <Input
+                    id="expires"
+                    type="number"
+                    value={newExpiresDays}
+                    onChange={(e) => setNewExpiresDays(parseInt(e.target.value))}
+                    className="rounded-xl h-9"
+                  />
+                </div>
 
-                  <div className="space-y-3">
-                    <Label htmlFor="funcDim" className="text-sm font-bold text-muted-foreground flex items-center gap-2">
-                      <ShieldCheck className="h-3 w-3" />
+                {/* 第三行：内容限制（全宽） */}
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="funcDim" className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                    <ShieldCheck className="h-3 w-3" />
+                    <span className="flex items-center gap-1">
                       {t("ui.token.function")}
-                    </Label>
-                    <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/50 border border-border">
-                      {[
-                        { id: "note_r", label: t("ui.token.funcNoteR") },
-                        { id: "note_w", label: t("ui.token.funcNoteW") },
-                        { id: "file_r", label: t("ui.token.funcFileR") },
-                        { id: "file_w", label: t("ui.token.funcFileW") },
-                        { id: "config_r", label: t("ui.token.funcConfigR") },
-                        { id: "config_w", label: t("ui.token.funcConfigW") },
-                      ].map((opt) => (
-                        <div key={opt.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`f-${opt.id}`}
-                            checked={newFuncDims.includes(opt.id)}
-                            onCheckedChange={() => toggleFuncDim(opt.id)}
-                          />
-                          <Label htmlFor={`f-${opt.id}`} className="cursor-pointer text-[13px]">{opt.label}</Label>
-                        </div>
-                      ))}
-                      <div className="col-span-2 border-t border-border/50 pt-2 mt-1">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="f-all"
-                            checked={newFuncDims.length === 0}
-                            onCheckedChange={(checked) => checked ? setNewFuncDims([]) : setNewFuncDims(["note_r"])}
-                          />
-                          <Label htmlFor="f-all" className="cursor-pointer font-bold text-[13px]">{t("ui.common.unrestricted")}</Label>
-                        </div>
+                      <Tooltip content={t("ui.token.functionHelp")}>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                      </Tooltip>
+                    </span>
+                  </Label>
+                  <div className="grid grid-cols-3 gap-y-3 gap-x-4 p-3 rounded-xl bg-muted/50 border border-border">
+                    {[
+                      { id: "note_r", label: t("ui.token.funcNoteR") },
+                      { id: "note_w", label: t("ui.token.funcNoteW") },
+                      { id: "file_r", label: t("ui.token.funcFileR") },
+                      { id: "file_w", label: t("ui.token.funcFileW") },
+                      { id: "config_r", label: t("ui.token.funcConfigR") },
+                      { id: "config_w", label: t("ui.token.funcConfigW") },
+                    ].map((opt) => (
+                      <div key={opt.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`f-${opt.id}`}
+                          checked={newFuncDims.includes(opt.id)}
+                          onCheckedChange={() => toggleFuncDim(opt.id)}
+                          className="h-3.5 w-3.5"
+                        />
+                        <Label htmlFor={`f-${opt.id}`} className="cursor-pointer text-xs truncate" title={opt.label}>{opt.label}</Label>
+                      </div>
+                    ))}
+                    <div className="col-span-3 border-t border-border/50 pt-2 mt-1">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="f-all"
+                          checked={newFuncDims.length === 0}
+                          onCheckedChange={(checked) => checked ? setNewFuncDims([]) : setNewFuncDims(["note_r"])}
+                          className="h-3.5 w-3.5"
+                        />
+                        <Label htmlFor="f-all" className="cursor-pointer font-bold text-xs">{t("ui.common.unrestricted")}</Label>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t border-border/50 pt-2 mt-2"></div>
+                {/* 第四行：限制 IP 和 限制 UA */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="boundIp" className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                    <Globe className="h-3 w-3" />
+                    {t("ui.token.boundIp")}
+                  </Label>
+                  <Input
+                    id="boundIp"
+                    value={newBoundIp}
+                    onChange={(e) => setNewBoundIp(e.target.value)}
+                    placeholder="e.g. 127.0.0.1"
+                    className="rounded-xl h-9"
+                  />
+                  <p className="text-[10px] text-muted-foreground/70 px-1 italic">
+                    {t("ui.token.ipWildcardHint")}
+                  </p>
+                </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="expires" className="text-xs font-medium text-muted-foreground">{t("ui.token.expiresDays")}</Label>
-                    <Input
-                      id="expires"
-                      type="number"
-                      value={newExpiresDays}
-                      onChange={(e) => setNewExpiresDays(parseInt(e.target.value))}
-                      className="rounded-xl h-9"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="boundIp" className="text-xs font-medium text-muted-foreground">{t("ui.token.boundIp")}</Label>
-                    <Input
-                      id="boundIp"
-                      value={newBoundIp}
-                      onChange={(e) => setNewBoundIp(e.target.value)}
-                      placeholder="e.g. 127.0.0.1"
-                      className="rounded-xl h-9"
-                    />
-                    <p className="text-[11px] text-muted-foreground/70 px-1 italic">
-                      {t("ui.token.ipWildcardHint")}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="userAgent" className="text-xs font-medium text-muted-foreground">{t("ui.token.userAgent")}</Label>
-                    <Input
-                      id="userAgent"
-                      value={newUserAgent}
-                      onChange={(e) => setNewUserAgent(e.target.value)}
-                      placeholder="e.g. Mozilla..."
-                      className="rounded-xl h-9"
-                    />
-                    <p className="text-[11px] text-muted-foreground/70 px-1 italic">
-                      {t("ui.token.uaWildcardHint")}
-                    </p>
-                  </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="userAgent" className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                    <Monitor className="h-3 w-3" />
+                    {t("ui.token.userAgent")}
+                  </Label>
+                  <Input
+                    id="userAgent"
+                    value={newUserAgent}
+                    onChange={(e) => setNewUserAgent(e.target.value)}
+                    placeholder="e.g. Mozilla..."
+                    className="rounded-xl h-9"
+                  />
+                  <p className="text-[10px] text-muted-foreground/70 px-1 italic">
+                    {t("ui.token.uaWildcardHint")}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -536,7 +567,10 @@ export const TokenManager = forwardRef<TokenManagerHandle, TokenManagerProps>(
                   {/* 顶部背景装饰 */}
                   <div className={cn(
                     "absolute top-0 left-0 right-0 h-1 transition-all duration-500",
-                    expiry.isExpired ? "bg-muted" : isSelf ? "bg-gradient-to-r from-emerald-500 to-teal-500" : "bg-gradient-to-r from-primary/40 to-primary"
+                    expiry.isExpired ? "bg-muted" : 
+                    isSelf ? "bg-gradient-to-r from-emerald-500 to-teal-500" : 
+                    token.issueType === 2 ? "bg-gradient-to-r from-blue-500 to-blue-600" :
+                    "bg-gradient-to-r from-primary/40 to-primary"
                   )} />
 
                   <CardContent className="p-5 space-y-4">
