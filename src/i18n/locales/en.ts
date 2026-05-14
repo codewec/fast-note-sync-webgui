@@ -190,7 +190,6 @@ export default {
     "ui.token.rotateEffectHint": "After performing this action, the old token will be immediately invalidated, and a new token will be generated.",
 
 
-
     // --- ui.user ---
     "ui.user.password": "Access Password",
 
