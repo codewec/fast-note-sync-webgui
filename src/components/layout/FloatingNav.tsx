@@ -1,7 +1,8 @@
-import { Library, NotepadText, ArchiveX, Settings, DatabaseBackup, GitPullRequestArrow, Paperclip, Layers, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, FileJson, Logs, ShieldCheck } from "lucide-react";
+import { Library, NotepadText, ArchiveX, Settings, DatabaseBackup, GitPullRequestArrow, Paperclip, Layers, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, FileJson, Logs } from "lucide-react";
 import { Fragment, useEffect, useRef, useState, useCallback } from "react";
 import { useAppStore, type ModuleId } from "@/stores/app-store";
 import { NavItem } from "@/components/navigation/NavItem";
+import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -73,7 +74,7 @@ export function FloatingNav({ isAdmin, className }: FloatingNavProps) {
 
   const navItems: Array<{
     id: ModuleId
-    icon: any
+    icon: LucideIcon
     labelKey: string
     adminOnly?: boolean
   }> = [
