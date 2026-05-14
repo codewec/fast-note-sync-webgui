@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Plus, Key, Library, RefreshCw, Check, X, Search, GripVertical, FileText, Paperclip, HardDrive, Wifi } from "lucide-react";
+import { Pencil, Trash2, Plus, Key, Library, RefreshCw, Check, X, Search, GripVertical, FileText, Paperclip, HardDrive, Wifi, Clock } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, rectSortingStrategy } from "@dnd-kit/sortable";
 import { TokenManager, TokenManagerHandle } from "@/components/user/token-manager";
@@ -75,7 +75,7 @@ function SortableVaultCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative flex flex-col gap-5 rounded-2xl border border-border/50 bg-card/60 p-5 transition-all duration-300",
+        "relative flex flex-col gap-4 rounded-2xl border border-border/50 bg-card/60 p-5 transition-all duration-300",
         "hover:shadow-xl hover:shadow-primary/5 hover:border-primary/40 hover:bg-card group cursor-pointer",
         isDragging && "shadow-2xl border-primary/50 bg-card"
       )}
@@ -185,7 +185,7 @@ function SortableVaultCard({
       </div>
 
       {/* 容量与时间 */}
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-[11px]">
           <div className="flex items-center gap-2 text-muted-foreground/70">
             <HardDrive className="h-3.5 w-3.5" />
@@ -195,7 +195,7 @@ function SortableVaultCard({
             {vault.updatedAt && (
               <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
                 <span className="flex items-center gap-1.5 text-muted-foreground/60">
-                  <RefreshCw className="h-3 w-3" />
+                  <Clock className="h-3 w-3" />
                   {vault.updatedAt.split(' ')[0]}
                 </span>
               </Tooltip>
@@ -203,12 +203,28 @@ function SortableVaultCard({
           </div>
         </div>
 
-        {/* 装饰性进度条 (示意用，假设以 1GB 为参考或仅展示) */}
-        <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-          <div
-            className="h-full bg-primary/40 transition-all duration-500"
-            style={{ width: `${Math.min((parseInt(String(vault.size)) / (1024 * 1024 * 1024)) * 100, 100)}%` }}
-          />
+        {/* 装饰性进度条 (细化显示笔记和附件占用) */}
+        <div className="h-1 w-full rounded-full bg-muted overflow-hidden flex">
+          {parseInt(String(vault.noteSize || 0)) > 0 && (
+            <div
+              className="h-full transition-all duration-500"
+              style={{
+                width: `${Math.max(5, Math.min((parseInt(String(vault.noteSize || 0)) / (1024 * 1024 * 1024)) * 100, 100))}%`,
+                backgroundColor: '#08b94e',
+                opacity: 0.3
+              }}
+            />
+          )}
+          {parseInt(String(vault.fileSize || 0)) > 0 && (
+            <div
+              className="h-full transition-all duration-500"
+              style={{
+                width: `${Math.min((parseInt(String(vault.fileSize || 0)) / (1024 * 1024 * 1024)) * 100, Math.max(0, 100 - (parseInt(String(vault.noteSize || 0)) > 0 ? Math.max(5, Math.min((parseInt(String(vault.noteSize || 0)) / (1024 * 1024 * 1024)) * 100, 100)) : 0)))}%`,
+                backgroundColor: '#7C4DFF',
+                opacity: 0.3
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -241,7 +257,7 @@ function SortableVaultCard({
           <>
             <Tooltip content={t("ui.vault.authTokenConfig")} side="top" delay={200}>
               <Button
-                className="h-8 px-3 rounded-xl bg-sky-700 hover:bg-sky-900 text-white transition-colors border-none shadow-sm flex items-center gap-1.5"
+                className="h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white transition-colors border-none shadow-sm flex items-center gap-1.5"
                 onClick={(e) => onViewConfig(vault.vault, e)}
               >
                 <Key className="h-4 w-4" />
@@ -466,8 +482,8 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
             <div className="relative flex items-center group/search">
               <div className={cn(
                 "flex items-center relative transition-all duration-300 ease-in-out overflow-hidden h-9 rounded-xl border border-transparent",
-                searchKeyword 
-                  ? "w-48 border-border bg-muted/50" 
+                searchKeyword
+                  ? "w-48 border-border bg-muted/50"
                   : "w-9 hover:w-48 hover:border-border hover:bg-muted/50 focus-within:w-48 focus-within:border-border focus-within:bg-muted/50"
               )}>
                 <Input
@@ -549,9 +565,9 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
         )}
 
         {/* 笔记库列表 */}
-        <div className="min-h-[300px]">
+        <div className="min-h-[290px]">
           {filteredVaults.length === 0 ? (
-            <div className="flex flex-col items-center justify-center min-h-[300px] text-muted-foreground border-2 border-dashed border-border/50 rounded-xl bg-muted/5">
+            <div className="flex flex-col items-center justify-center min-h-[290px] text-muted-foreground border-2 border-dashed border-border/50 rounded-xl bg-muted/5">
               <Library className="h-12 w-12 mb-3 opacity-20" />
               <p className="text-sm opacity-70 mb-4">
                 {searchKeyword ? t("ui.common.noSearchResults") : t("ui.vault.noVaults")}
@@ -559,7 +575,7 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
               {!searchKeyword && vaults.length === 0 && (
                 <Button
                   variant="outline"
-                  className="rounded-xl bg-sky-700 hover:bg-sky-900 text-white hover:text-white transition-colors border-none shadow-sm"
+                  className="rounded-xl bg-primary hover:bg-primary/90 text-white hover:text-white transition-colors border-none shadow-sm"
                   onClick={(e) => handleViewConfig("", e)}
                 >
                   <Key className="h-4 w-4 mr-2" />
