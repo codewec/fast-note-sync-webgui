@@ -257,7 +257,7 @@ function SortableVaultCard({
           <>
             <Tooltip content={t("ui.vault.authTokenConfig")} side="top" delay={200}>
               <Button
-                className="h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white transition-colors border-none shadow-sm flex items-center gap-1.5"
+                className="h-8 px-3 rounded-xl border-none shadow-sm flex items-center gap-1.5"
                 onClick={(e) => onViewConfig(vault.vault, e)}
               >
                 <Key className="h-4 w-4" />
@@ -574,8 +574,7 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
               </p>
               {!searchKeyword && vaults.length === 0 && (
                 <Button
-                  variant="outline"
-                  className="rounded-xl bg-primary hover:bg-primary/90 text-white hover:text-white transition-colors border-none shadow-sm"
+                  className="rounded-xl border-none shadow-sm"
                   onClick={(e) => handleViewConfig("", e)}
                 >
                   <Key className="h-4 w-4 mr-2" />

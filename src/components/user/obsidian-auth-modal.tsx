@@ -131,7 +131,7 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName, onSuccess }: 
                 {t("ui.common.close")}
               </Button>
               <Button
-                className="rounded-xl bg-sky-700 hover:bg-sky-900 text-white transition-all shadow-md shadow-sky-500/10 flex-1 sm:flex-none"
+                className="rounded-xl transition-all shadow-md flex-1 sm:flex-none"
                 onClick={() => {
                   window.location.href = getObsidianUrl();
                 }}
