@@ -782,7 +782,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, TokenManagerProps>(
 
 
         <Dialog open={isLogOpen} onOpenChange={setIsLogOpen}>
-          <DialogContent className="sm:max-w-[800px] rounded-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogContent className="sm:max-w-[900px] lg:max-w-[1000px] rounded-2xl max-h-[85vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <History className="h-5 w-5 text-primary" />
@@ -794,16 +794,16 @@ export const TokenManager = forwardRef<TokenManagerHandle, TokenManagerProps>(
             </DialogHeader>
 
             <div className="flex-1 overflow-auto py-4">
-              <div className="rounded-xl border border-border overflow-hidden">
-                <Table>
+              <div className="rounded-xl border border-border overflow-x-auto">
+                <Table className="min-w-[800px]">
                   <TableHeader className="bg-muted/50">
                     <TableRow>
-                      <TableHead className="w-[160px] text-[11px] uppercase tracking-wider font-bold">{t("ui.token.logTime")}</TableHead>
+                      <TableHead className="w-[170px] text-[11px] uppercase tracking-wider font-bold">{t("ui.token.logTime")}</TableHead>
                       <TableHead className="w-[80px] text-[11px] uppercase tracking-wider font-bold">{t("ui.token.logProtocol") || "协议"}</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider font-bold">{t("ui.token.logClient")}</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider font-bold">{t("ui.token.logIp")}</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider font-bold">{t("ui.token.logUa")}</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider font-bold text-center">{t("ui.token.logStatus")}</TableHead>
+                      <TableHead className="w-[180px] text-[11px] uppercase tracking-wider font-bold">{t("ui.token.logClient")}</TableHead>
+                      <TableHead className="w-[120px] text-[11px] uppercase tracking-wider font-bold">{t("ui.token.logIp")}</TableHead>
+                      <TableHead className="min-w-[200px] text-[11px] uppercase tracking-wider font-bold">{t("ui.token.logUa")}</TableHead>
+                      <TableHead className="w-[70px] text-[11px] uppercase tracking-wider font-bold text-center">{t("ui.token.logStatus")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -841,7 +841,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, TokenManagerProps>(
                           </TableCell>
                           <TableCell className="text-xs font-mono">{log.ip}</TableCell>
                           <TableCell>
-                            <div className="text-[10px] text-muted-foreground/60 truncate max-w-[200px]" title={log.ua}>
+                            <div className="text-[10px] text-muted-foreground/60 truncate max-w-[300px]" title={log.ua}>
                               {log.ua}
                             </div>
                           </TableCell>
