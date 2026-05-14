@@ -11,6 +11,8 @@ export interface BackupConfig {
     storageIds: string; // JSON array string, e.g., "[1, 2]"
     isEnabled: boolean;
     includeVaultName?: boolean;
+    passwordMode: number;
+    passwordValue?: string;
     retentionDays?: number;
     lastRunTime?: string;
     nextRunTime?: string;
@@ -47,6 +49,8 @@ export interface BackupConfigRequest {
     storageIds: string;
     isEnabled: boolean;
     includeVaultName?: boolean;
+    passwordMode: number;
+    passwordValue?: string;
     retentionDays?: number;
 }
 

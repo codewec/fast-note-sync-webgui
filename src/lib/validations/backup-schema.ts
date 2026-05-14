@@ -20,6 +20,8 @@ export const createBackupConfigSchema = (t: (key: string) => string) => z.object
     }, t("ui.backup.validation.storageRequired")),
     isEnabled: z.boolean().default(true),
     includeVaultName: z.boolean().default(false),
+    passwordMode: z.number().int().min(0).max(2).default(0),
+    passwordValue: z.string().optional(),
     retentionDays: z.number().int().min(-1, t("ui.backup.validation.retentionDaysMin")).optional(),
 }).refine((data) => {
     if (data.cronStrategy === "custom" && !data.cronExpression) {

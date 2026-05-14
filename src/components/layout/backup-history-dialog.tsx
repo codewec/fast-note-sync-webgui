@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Loader2, Info, ExternalLink, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Info, ExternalLink, Copy, Eye, EyeOff } from "lucide-react";
 import { useStorageHandle } from "@/components/api-handle/storage-handle";
 import { useBackupHandle } from "@/components/api-handle/backup-handle";
 import { BackupHistory, BackupType } from "@/lib/types/backup";
@@ -29,6 +29,7 @@ export function BackupHistoryDialog({ configId, configType, open, onOpenChange }
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
+    const [visiblePasswords, setVisiblePasswords] = useState<Record<number, boolean>>({});
     const pageSize = 5;
     const historyRequestIdRef = useRef(0);
     const storageRequestIdRef = useRef(0);
@@ -58,6 +59,7 @@ export function BackupHistoryDialog({ configId, configType, open, onOpenChange }
                 setStorages(data);
             });
             setPage(1);
+            setVisiblePasswords({});
             loadHistory(1);
             return;
         }
@@ -199,7 +201,23 @@ export function BackupHistoryDialog({ configId, configType, open, onOpenChange }
                                         <TableCell>
                                             {item.password ? (
                                                 <div className="flex items-center gap-1">
-                                                    <span className="font-mono text-[10px] bg-muted px-1 rounded truncate max-w-[80px]" title={item.password}>{item.password}</span>
+                                                    <span className="font-mono text-[10px] bg-muted px-1 rounded truncate max-w-[80px]" title={visiblePasswords[item.id] ? item.password : undefined}>
+                                                        {visiblePasswords[item.id] ? item.password : "******"}
+                                                    </span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-5 w-5 shrink-0 text-muted-foreground hover:text-primary"
+                                                        onClick={() => {
+                                                            setVisiblePasswords(prev => ({
+                                                                ...prev,
+                                                                [item.id]: !prev[item.id]
+                                                            }));
+                                                        }}
+                                                        title={visiblePasswords[item.id] ? t("ui.common.hide") : t("ui.common.show")}
+                                                    >
+                                                        {visiblePasswords[item.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                                    </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"

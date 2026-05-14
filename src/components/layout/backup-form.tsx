@@ -60,8 +60,10 @@ export function BackupForm({ config, storages, onSubmit, onCancel }: BackupFormP
         storageIds: JSON.stringify(initialStorageIds),
         isEnabled: config?.isEnabled ?? true,
         includeVaultName: config?.includeVaultName ?? false,
+        passwordMode: config?.passwordMode ?? 0,
+        passwordValue: config?.passwordValue || "",
         retentionDays: config?.retentionDays ?? 30,
-    }), [config?.vault, config?.type, config?.cronStrategy, config?.cronExpression, config?.isEnabled, config?.includeVaultName, config?.retentionDays, initialStorageIds]);
+    }), [config?.vault, config?.type, config?.cronStrategy, config?.cronExpression, config?.isEnabled, config?.includeVaultName, config?.passwordMode, config?.passwordValue, config?.retentionDays, initialStorageIds]);
 
     const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = useForm<BackupFormData>({
         resolver: zodResolver(schema),
@@ -212,7 +214,40 @@ export function BackupForm({ config, storages, onSubmit, onCancel }: BackupFormP
                             />
                             {errors.cronExpression && <p className="text-[11px] text-destructive mt-1 ml-1">{errors.cronExpression.message}</p>}
                         </div>
+                    </>
+                )}
 
+                {/* 仅在全量或增量备份时显示的密码配置项 */}
+                {(watch("type") === "full" || watch("type") === "incremental") && (
+                    <>
+                        {/* 密码模式选择 */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-muted-foreground ml-1">{t("ui.backup.passwordMode")}</Label>
+                            <Select
+                                onValueChange={(value) => setValue("passwordMode", Number(value))}
+                                value={String(watch("passwordMode") ?? 0)}>
+                                <SelectTrigger className="bg-background border-input">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="0">{t("ui.backup.passwordMode.0")}</SelectItem>
+                                    <SelectItem value="1">{t("ui.backup.passwordMode.1")}</SelectItem>
+                                    <SelectItem value="2">{t("ui.backup.passwordMode.2")}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* 固定密码输入 - 仅在模式为 1 时显示 */}
+                        <div className={cn("space-y-1.5", Number(watch("passwordMode")) !== 1 && "opacity-50 pointer-events-none")}>
+                            <Label className="text-xs font-semibold text-muted-foreground ml-1">{t("ui.backup.passwordValue")}</Label>
+                            <Input
+                                {...register("passwordValue")}
+                                type="password"
+                                placeholder={t("ui.backup.passwordValue.placeholder")}
+                                className="bg-background border-input"
+                                disabled={Number(watch("passwordMode")) !== 1}
+                            />
+                        </div>
                     </>
                 )}
 
