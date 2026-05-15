@@ -1,9 +1,9 @@
 import { Heart, RefreshCw, Loader2, MessageCircle, Smile, Coffee, QrCode, ExternalLink, Trophy, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { useSupport } from "@/components/api-handle/use-support";
+import { useEffect, useState, useCallback } from "react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
-import { useEffect, useState, useCallback } from "react";
 
 
 type SortKey = "time" | "amount" | "amount_3m";
@@ -88,12 +88,12 @@ export function SupportList() {
                 </Button>
             </div>
 
-            <p className="text-xs leading-relaxed text-muted-foreground bg-muted/30 p-2.5 rounded-lg border border-border/40">
+            <p className="text-xs leading-relaxed text-muted-foreground bg-muted/30 p-2.5 rounded-lg border border-border/40 mb-3">
                 {t("ui.support.supportRequest")}
             </p>
 
             {/* Donation Methods */}
-            <div className="fns-support-cards-container">
+            <div className="fns-support-cards-container mb-2">
                 {/* Ko-fi Card */}
                 <div className="fns-support-card">
                     <div className="fns-support-card-header">
@@ -130,28 +130,30 @@ export function SupportList() {
                     </span>
                 </h3>
 
-                <div className="flex items-center bg-secondary/80 rounded-lg p-0.5 border border-border/50 shadow-inner">
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
+                <div className="flex items-center gap-1.5 px-1">
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleSortChange("amount_3m")}
-                        className={`h-5 min-h-0 px-2 text-[10px] rounded-md transition-all ${sortKey === "amount_3m" ? "bg-card text-primary shadow-sm font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`h-5 min-h-0 px-1 text-[10px] bg-transparent hover:bg-transparent transition-all ${sortKey === "amount_3m" ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
                     >
                         {t("ui.support.sortAmountHalfYear")}
                     </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
+                    <div className="h-2.5 w-[1px] bg-border/40 mx-0.5 shrink-0" />
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleSortChange("amount")}
-                        className={`h-5 min-h-0 px-2 text-[10px] rounded-md transition-all ${sortKey === "amount" ? "bg-card text-primary shadow-sm font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`h-5 min-h-0 px-1 text-[10px] bg-transparent hover:bg-transparent transition-all ${sortKey === "amount" ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
                     >
                         {t("ui.support.sortDefault")}
                     </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
+                    <div className="h-2.5 w-[1px] bg-border/40 mx-0.5 shrink-0" />
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleSortChange("time")}
-                        className={`h-5 min-h-0 px-2 text-[10px] rounded-md transition-all ${sortKey === "time" ? "bg-card text-primary shadow-sm font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`h-5 min-h-0 px-1 text-[10px] bg-transparent hover:bg-transparent transition-all ${sortKey === "time" ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
                     >
                         {t("ui.support.sortTime")}
                     </Button>
@@ -183,7 +185,7 @@ export function SupportList() {
                                             <div className="text-[10px] text-muted-foreground font-mono tabular-nums opacity-50 shrink-0">
                                                 {(record.time || "").split(' ')[0].substring(2) || "N/A"}
                                             </div>
-                                            
+
                                             {/* Name and Message */}
                                             <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                                                 <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white shrink-0 shadow-sm ${getAvatarColor(record.name)}`}>
