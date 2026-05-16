@@ -771,7 +771,7 @@ export default {
     "ui.support.amount": "金额",
     "ui.support.time": "时间",
     "ui.support.message": "留言",
-    "ui.support.thanks": "感谢大家对 Fast Note Sync 的支持！已支持列表会不定期更新",
+    "ui.support.thanks": "感谢大家对 Fast Note Sync 的支持,本列表会不定期更新, 支持留言允许 <b>推荐信息</b> 或 <b>反馈问题ID</b>，例如：#1234 方便快速获取帮助",
     "ui.support.sortDefault": "全部金额",
     "ui.support.sortTime": "全部时间",
     "ui.support.sortAmountHalfYear": "默认排序",

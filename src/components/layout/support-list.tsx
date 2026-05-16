@@ -88,7 +88,7 @@ export function SupportList() {
                 </Button>
             </div>
 
-            <p className="text-xs leading-relaxed text-muted-foreground bg-muted/30 p-2.5 rounded-lg border border-border/40 mb-3">
+            <p className="text-xs leading-relaxed text-muted-foreground bg-muted/50 p-2.5 rounded-lg border border-border/40 mb-3">
                 {t("ui.support.supportRequest")}
             </p>
 
@@ -160,7 +160,7 @@ export function SupportList() {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto border border-border/40 rounded-lg bg-card/10 custom-scrollbar relative min-h-30">
+            <div className="flex-1 overflow-y-auto border border-border/40 rounded-lg bg-card/50 custom-scrollbar relative min-h-30">
                 {supportList.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-2 opacity-60 py-8">
                         <MessageCircle className="h-6 w-6 stroke-[1.5]" />
@@ -220,9 +220,10 @@ export function SupportList() {
 
             {pager && pager.totalRows > 0 && (
                 <div className="flex items-center justify-between pt-1 pb-1 px-1">
-                    <div className="text-[10px] text-muted-foreground opacity-70">
-                        {t("ui.common.total", { defaultValue: `共 ${pager.totalRows} 条` })}
-                    </div>
+                    <div 
+                        className="text-[10px] text-muted-foreground opacity-70"
+                        dangerouslySetInnerHTML={{ __html: t("ui.support.thanks") }}
+                    />
                     <div className="flex items-center gap-1.5">
                         <Button
                             variant="ghost"
@@ -248,10 +249,6 @@ export function SupportList() {
                     </div>
                 </div>
             )}
-
-            <div className="pt-0.5 text-[10px] text-center text-muted-foreground italic opacity-40">
-                {t("ui.support.thanks")}
-            </div>
         </div>
     )
 }

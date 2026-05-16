@@ -790,7 +790,6 @@ html.dark[data-color-scheme="teal"],
     min-height: 36px;
   }
 
-
   button[data-size="icon-sm"],
   button[data-size="icon-lg"] {
     min-width: 36px;
@@ -886,10 +885,9 @@ html.dark[data-color-scheme="teal"],
     grid-template-columns: 1fr;
   }
 }
-
 .fns-support-card {
   flex: 1;
-  background-color: var(--secondary);
+  @apply bg-card/50;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 8px 12px;
@@ -905,7 +903,7 @@ html.dark[data-color-scheme="teal"],
   border-color: var(--primary);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
-  background-color: var(--muted);
+  @apply bg-muted/80;
   opacity: 0.95;
 }
 
@@ -964,7 +962,9 @@ html.dark[data-color-scheme="teal"],
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   cursor: zoom-in;
   position: relative;
   z-index: 1;
