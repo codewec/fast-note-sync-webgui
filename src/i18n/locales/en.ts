@@ -778,7 +778,7 @@ export default {
     "ui.support.amount": "Amount",
     "ui.support.time": "Time",
     "ui.support.message": "Message",
-    "ui.support.thanks": "Thank you for your support of Fast Note Sync. This list is updated periodically. Please leave a message allowing <b>recommendation information</b> or <b>feedback issue ID</b>, e.g., #1234, to facilitate quick assistance.",
+    "ui.support.thanks": "Thank you for your support of Fast Note Sync. This list will be updated from time to time. In addition to leaving a message, you can also add <b>recommendation information</b> or <b>feedback issue IDs</b>, such as #1234, to facilitate quick assistance.",
     "ui.support.sortDefault": "All Amounts",
     "ui.support.sortTime": "All Times",
     "ui.support.sortAmountHalfYear": "Default Sort",

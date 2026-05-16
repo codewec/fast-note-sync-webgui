@@ -778,7 +778,7 @@ export default {
     "ui.support.amount": "金額",
     "ui.support.time": "時間",
     "ui.support.message": "メッセージ",
-    "ui.support.thanks": "Fast Note Sync へのご支援ありがとうございます。このリストは不定期で更新されます。サポートメッセージには <b>推奨情報</b> または <b>問題IDのフィードバック</b>（例: #1234）を記載し、迅速なサポートを受け取ってください。",
+    "ui.support.thanks": "Fast Note Sync へのご支援ありがとうございます。このリストは随時更新されます。メッセージの他に、メッセージ本文に<b>推奨情報</b>または<b>問題ID</b>（例：#1234）を追加していただくと、迅速なサポートを受けられます。",
     "ui.support.sortDefault": "全額",
     "ui.support.sortTime": "全期間",
     "ui.support.sortAmountHalfYear": "デフォルト順",
