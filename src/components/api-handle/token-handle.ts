@@ -14,6 +14,7 @@ export interface TokenInfo {
   lastUsedAt?: string;
   issueType: number;
   isWsOnline: boolean;
+  activeClients?: string[];
 }
 
 export interface TokenLog {

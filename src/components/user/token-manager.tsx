@@ -1,4 +1,4 @@
-import { ShieldCheck, Smartphone, Monitor, RefreshCw, RotateCw, Trash2, Clock, Globe, ShieldAlert, Plus, Key, Copy, Check, Terminal, FileText, ChevronLeft, ChevronRight, History, Activity, MoreVertical, HelpCircle } from "lucide-react";
+import { ShieldCheck, Smartphone, Monitor, RefreshCw, RotateCw, Trash2, Clock, Globe, ShieldAlert, Plus, Key, Copy, Check, Terminal, FileText, ChevronLeft, ChevronRight, History, Activity, MoreVertical, HelpCircle, Laptop, Apple, Chrome } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
@@ -30,6 +30,19 @@ export interface TokenManagerHandle {
   refresh: () => void;
   setFilterType: (type: 0 | 1 | 2) => void;
 }
+
+// 专业品牌图标组件
+const WindowsIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M0 3.449L9.75 2.1V11.7H0V3.449zm0 17.1L9.75 21.9V12.3H0v8.249zM10.5 2V11.7H24V0L10.5 2zm0 19.9l13.5 2V12.3H10.5v9.6z" />
+  </svg>
+);
+
+const AndroidIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M17.523 15.3414C17.0709 15.3414 16.7042 14.9747 16.7042 14.5226C16.7042 14.0705 17.0709 13.7038 17.523 13.7038C17.9751 13.7038 18.3418 14.0705 18.3418 14.5226C18.3418 14.9747 17.9751 15.3414 17.523 15.3414ZM6.47702 15.3414C6.02492 15.3414 5.65823 14.9747 5.65823 14.5226C5.65823 14.0705 6.02492 13.7038 6.47702 13.7038C6.92911 13.7038 7.29581 14.0705 7.29581 14.5226C7.29581 14.9747 6.92911 15.3414 6.47702 15.3414ZM17.8465 10.925L19.4975 8.06544C19.648 7.80481 19.5588 7.47196 19.2982 7.32145C19.0375 7.17094 18.7047 7.26017 18.5542 7.52081L16.8529 10.4677C15.4269 9.81534 13.8052 9.42997 12 9.42997C10.1948 9.42997 8.57307 9.81534 7.14713 10.4677L5.44577 7.52081C5.29527 7.26017 4.96245 7.17094 4.70181 7.32145C4.44116 7.47196 4.35194 7.80481 4.50244 8.06544L6.15347 10.925C3.06456 12.6015 1 15.7725 1 19.4673H23C23 15.7725 20.9354 12.6015 17.8465 10.925Z" />
+  </svg>
+);
 
 const TokenManagerInner = (
   { isCompact, onCountChange, onOnlineCountChange, onLoginCountChange, onManualCountChange }: TokenManagerProps,
@@ -291,6 +304,27 @@ const TokenManagerInner = (
         }
         return next;
       });
+    };
+
+    const renderDeviceIcon = (clientName: string = "") => {
+      const name = String(clientName || "").toLowerCase();
+
+      if (name.includes("web") || name.includes("chrome") || name.includes("edge") || name.includes("safari") || name.includes("firefox")) {
+        return <Chrome className="h-3 w-3 text-[#4285F4] shrink-0" />;
+      } else if (name.includes("mac") || name.includes("apple") || name.includes("iphone") || name.includes("ipad") || name.includes("ios")) {
+        if (name.includes("iphone") || name.includes("ipad") || name.includes("ios")) {
+          return <Smartphone className="h-3 w-3 text-[#555555] shrink-0" />;
+        }
+        return <Apple className="h-3 w-3 text-[#555555] shrink-0" />;
+      } else if (name.includes("win")) {
+        return <WindowsIcon className="h-3 w-3 text-[#0078D4] shrink-0 translate-y-[0.5px]" />;
+      } else if (name.includes("android")) {
+        return <AndroidIcon className="h-3 w-3 text-[#3DDC84] shrink-0" />;
+      } else if (name.includes("mobile")) {
+        return <Smartphone className="h-3 w-3 text-slate-400 shrink-0" />;
+      }
+
+      return <Laptop className="h-3 w-3 text-slate-400 shrink-0" />;
     };
 
     const getClientIcon = (clientType: string) => {
@@ -815,10 +849,22 @@ const TokenManagerInner = (
                         <span className="font-medium">
                           {token.lastUsedAt && !token.lastUsedAt.startsWith("0001") ? new Date(token.lastUsedAt).toLocaleString() : t("ui.common.never")}
                         </span>
-                        {token.lastUsedAt && !token.lastUsedAt.startsWith("0001") && (new Date().getTime() - new Date(token.lastUsedAt).getTime() < 5 * 60 * 1000) && (
+                        {token.lastUsedAt && !token.lastUsedAt.startsWith("0001") && (new Date().getTime() - new Date(token.lastUsedAt).getTime() < 60 * 60 * 1000) && (
                           <span className="text-emerald-500  ml-1 animate-pulse">
                             {t("ui.token.recentUse")}
                           </span>
+                        )}
+                        {token.activeClients && token.activeClients.length > 0 && (
+                          <div className="flex items-center gap-2 ml-1 pl-2 border-l border-border/50">
+                            {token.activeClients.map((name, index) => (
+                              <div key={index} className="flex items-center gap-1">
+                                {renderDeviceIcon(name)}
+                                <span className="text-primary font-bold">
+                                  {name}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <Tooltip
