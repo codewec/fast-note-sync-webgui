@@ -22,11 +22,17 @@ export default defineConfig({
     },
   },
   server: {
+    cors: true,
     // 处理开发环境下的路径重写，使 /share.html/id/token 或 /share/id/token 能够加载 share.html
     proxy: {
        '^/(share.html|share)/.*': {
           target: 'http://localhost:5173',
           rewrite: () => '/share.html',
+       },
+       '/api/user/sync': {
+          target: 'ws://localhost:9000',
+          ws: true,
+          changeOrigin: true,
        },
        '/api': {
           target: 'http://localhost:9000',
