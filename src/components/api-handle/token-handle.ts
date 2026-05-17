@@ -6,6 +6,7 @@ import env from "@/env.ts";
 export interface TokenInfo {
   id: number;
   scope: string;
+  vaults?: string;
   clientType: string;
   boundIp: string;
   userAgent: string;
@@ -116,7 +117,8 @@ export function useTokenHandle() {
     userAgent?: string,
     protocol?: string,
     client?: string,
-    functionScope?: string
+    functionScope?: string,
+    vaults?: string
   ) => {
     setIsLoading(true);
     try {
@@ -132,6 +134,7 @@ export function useTokenHandle() {
           protocol,
           client,
           function: functionScope,
+          vaults,
         }),
       });
 
@@ -162,7 +165,8 @@ export function useTokenHandle() {
     userAgent?: string,
     protocol?: string,
     client?: string,
-    functionScope?: string
+    functionScope?: string,
+    vaults?: string
   ) => {
     setIsLoading(true);
     try {
@@ -178,6 +182,7 @@ export function useTokenHandle() {
           protocol,
           client,
           function: functionScope,
+          vaults,
         }),
       });
 

@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
 import { useEffect, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useTokenHandle, TokenLog } from "@/components/api-handle/token-handle";
+import { useVaultHandle } from "@/components/api-handle/vault-handle";
+import { VaultType } from "@/lib/types/vault";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -101,6 +103,18 @@ const TokenManagerInner = (
 
     // Create/Edit token dialog state
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const { handleVaultList } = useVaultHandle();
+    const [availableVaults, setAvailableVaults] = useState<VaultType[]>([]);
+    const [selectedVaults, setSelectedVaults] = useState<string[]>([]);
+
+    useEffect(() => {
+      if (isCreateOpen) {
+        handleVaultList((list) => {
+          setAvailableVaults(list);
+        }).catch((err) => console.error("Failed to load vaults for token restriction", err));
+      }
+    }, [isCreateOpen, handleVaultList]);
+
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingTokenId, setEditingTokenId] = useState<number | null>(null);
 
@@ -210,6 +224,10 @@ const TokenManagerInner = (
       setNewClientDim(c);
       setNewFuncDims(f);
 
+      // Parse vaults
+      const vList = token.vaults ? token.vaults.split(",").filter((i: string) => i) : [];
+      setSelectedVaults(vList);
+
       // Expires: Calculate days from now
       const expiresAt = new Date(token.expiredAt);
       const diff = Math.ceil((expiresAt.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
@@ -238,6 +256,7 @@ const TokenManagerInner = (
     const onSubmitToken = async () => {
       const protocolStr = newProtocols.length === 0 ? "*" : newProtocols.join(",");
       const funcStr = newFuncDims.length === 0 ? "*" : newFuncDims.join(",");
+      const vaultsStr = selectedVaults.length === 0 ? "" : selectedVaults.join(",");
 
       if (isEditMode && editingTokenId) {
         const success = await handleUpdateToken(
@@ -249,7 +268,8 @@ const TokenManagerInner = (
           newUserAgent.trim(),
           protocolStr,
           newClientDim.trim(),
-          funcStr
+          funcStr,
+          vaultsStr
         );
         if (success) {
           toast.success(t("ui.common.success"));
@@ -266,7 +286,8 @@ const TokenManagerInner = (
           newUserAgent.trim(),
           protocolStr,
           newClientDim.trim(),
-          funcStr
+          funcStr,
+          vaultsStr
         );
         if (token) {
           setGeneratedToken(token);
@@ -298,6 +319,7 @@ const TokenManagerInner = (
       setNewProtocols(["rest", "ws"]);
       setNewClientDim("*");
       setNewFuncDims([]);
+      setSelectedVaults([]);
       setNewExpiresDays(30);
       setNewBoundIp("");
       setNewUserAgent("");
@@ -633,6 +655,53 @@ const TokenManagerInner = (
                   </div>
                 </div>
 
+                {/* 笔记库限制（全宽） */}
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                    <Globe className="h-3 w-3" />
+                    <span className="flex items-center gap-1">
+                      {t("ui.token.vaultRestriction")}
+                      <Tooltip content={t("ui.token.vaultRestrictionHelp")}>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary cursor-help transition-colors" />
+                      </Tooltip>
+                    </span>
+                  </Label>
+                  <div className="flex flex-wrap gap-3 p-3 rounded-xl bg-muted/50 border border-border">
+                    {availableVaults.length === 0 ? (
+                      <p className="text-xs text-muted-foreground/75 px-1 py-0.5">
+                        {t("ui.token.noVaultsAvailable")}
+                      </p>
+                    ) : (
+                      <>
+                        {availableVaults.map((v) => (
+                          <div key={v.id} className="flex items-center space-x-2 bg-background/50 hover:bg-background/80 px-2.5 py-1.5 rounded-lg border border-border/40 transition-colors">
+                            <Checkbox
+                              id={`v-${v.id}`}
+                              checked={selectedVaults.includes(v.vault)}
+                              onCheckedChange={(checked) => {
+                                setSelectedVaults(prev =>
+                                  checked ? [...prev, v.vault] : prev.filter(item => item !== v.vault)
+                                );
+                              }}
+                              className="h-3.5 w-3.5"
+                            />
+                            <Label htmlFor={`v-${v.id}`} className="cursor-pointer text-xs font-medium">{v.vault}</Label>
+                          </div>
+                        ))}
+                        <div className="flex items-center space-x-2 bg-background/50 hover:bg-background/80 px-2.5 py-1.5 rounded-lg border border-border/40 transition-colors ml-auto">
+                          <Checkbox
+                            id="v-all"
+                            checked={selectedVaults.length === 0}
+                            onCheckedChange={(checked) => checked && setSelectedVaults([])}
+                            className="h-3.5 w-3.5"
+                          />
+                          <Label htmlFor="v-all" className="cursor-pointer text-xs font-bold text-primary">{t("ui.common.unrestricted")}</Label>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
                 {/* 第四行：限制 IP 和 限制 UA */}
                 <div className="space-y-1.5">
                   <Label htmlFor="boundIp" className="text-sm font-bold text-muted-foreground flex items-center gap-2">
@@ -820,6 +889,16 @@ const TokenManagerInner = (
                                     {t("ui.token.uaRestriction")}
                                   </Badge>
                                 </Tooltip>
+                              )}
+
+                              {token.vaults ? (
+                                <Badge variant="outline" className="h-4 text-[9px] px-1 font-semibold border-emerald-500/30 text-emerald-600 bg-emerald-500/5 whitespace-nowrap">
+                                  {t("ui.token.vaultRestriction")}: {token.vaults}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="h-4 text-[9px] px-1 font-medium border-border/80 text-muted-foreground/80 bg-muted/20 whitespace-nowrap">
+                                  {t("ui.token.vaultRestriction")}: {t("ui.common.unrestricted")}
+                                </Badge>
                               )}
                             </div>
                           </div>
