@@ -4,7 +4,8 @@ import { createLoginSchema, createRegisterSchema, type LoginFormData, type Regis
 import { AnimatedBackground } from "@/components/user/animated-background";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { motion, AnimatePresence, type Variants } from "motion/react";
-import { Sun, Moon, SunMoon, Github, Wifi } from "lucide-react";
+import { ThemeSwitcher } from "@/components/layout/theme-switcher";
+import { Github, Wifi } from "lucide-react";
 import { useTheme } from "@/components/context/theme-context";
 import { useAuth } from "@/components/api-handle/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,7 +41,7 @@ const formVariants: Variants = {
 export function AuthForm({ onSuccess, registerIsEnable = true }: AuthFormProps) {
   const { t } = useTranslation()
   const { isLoading, login, registerUser } = useAuth()
-  const { theme, setTheme, resolvedTheme } = useTheme()
+  const { resolvedTheme } = useTheme()
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
 
   const loginSchema = createLoginSchema(t)
@@ -101,23 +102,7 @@ export function AuthForm({ onSuccess, registerIsEnable = true }: AuthFormProps) 
         >
           <Github size={18} />
         </button>
-        <button
-          onClick={() => {
-            if (theme === "light") setTheme("dark");
-            else if (theme === "dark") setTheme("auto");
-            else setTheme("light");
-          }}
-          className="auth-floating-switcher"
-          title={t(theme === "auto" ? "ui.settings.themeAuto" : (resolvedTheme === "dark" ? "ui.settings.themeDark" : "ui.settings.themeLight"))}
-        >
-          {theme === "auto" ? (
-            <SunMoon size={18} />
-          ) : resolvedTheme === "dark" ? (
-            <Moon size={18} />
-          ) : (
-            <Sun size={18} />
-          )}
-        </button>
+        <ThemeSwitcher asPlainButton className="auth-floating-switcher" />
         <LanguageSwitcher
           showText={false}
           className="auth-floating-switcher"

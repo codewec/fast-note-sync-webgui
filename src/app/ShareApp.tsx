@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useNoteHandle } from "@/components/api-handle/note-handle";
 import { NoteDetail } from "@/lib/types/note";
 import { useTranslation } from "react-i18next";
-import { Loader2, Share2, Calendar, FileText, Sun, Moon, RefreshCw, MoveHorizontal, SunMoon, MoreVertical, Languages, Palette, Lock } from "lucide-react";
+import { Loader2, Share2, Calendar, FileText, RefreshCw, MoveHorizontal, MoreVertical, Languages, Palette, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ColorSchemeSwitcher } from "@/components/layout/ColorSchemeSwitcher";
-import { useTheme } from "@/components/context/theme-context";
+import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -24,14 +24,8 @@ import { handleFontsUpdate } from "@/lib/utils/font-loader";
 
 export function ShareApp() {
     const { t } = useTranslation();
-    const { theme, resolvedTheme, setTheme } = useTheme();
     const { handleGetShareNote } = useNoteHandle();
-    
-    const handleThemeToggle = () => {
-        if (theme === "light") setTheme("dark");
-        else if (theme === "dark") setTheme("auto");
-        else setTheme("light");
-    };
+
     const { colorScheme } = useShareSettingsStore();
     const [note, setNote] = useState<NoteDetail | null>(null);
     const [errorCode, setErrorCode] = useState<number | null>(null);
@@ -367,22 +361,9 @@ export function ShareApp() {
                                 </Tooltip>
                             </div>
 
-                            {/* Theme toggle - Always visible as it's common */}
-                            <Tooltip content={t(theme === "auto" ? "ui.settings.themeAuto" : (resolvedTheme === "dark" ? "ui.settings.themeDark" : "ui.settings.themeLight"))}>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="size-9 rounded-xl"
-                                    onClick={handleThemeToggle}
-                                >
-                                    {theme === "auto" ? (
-                                        <SunMoon className="size-5 text-primary" />
-                                    ) : resolvedTheme === "dark" ? (
-                                        <Moon className="size-5" />
-                                    ) : (
-                                        <Sun className="size-5" />
-                                    )}
-                                </Button>
+                            {/* Theme picker - Always visible as it's common */}
+                            <Tooltip content={t("ui.common.toggleTheme")}>
+                                <div><ThemeSwitcher className="rounded-xl" /></div>
                             </Tooltip>
 
                             {/* Mobile only "More" menu */}
