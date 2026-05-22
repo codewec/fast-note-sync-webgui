@@ -245,6 +245,8 @@ export default {
     "ui.note.newNote": "새 노트",
     "ui.note.noNotes": "노트가 없습니다",
     "ui.note.viewNote": "노트 보기",
+    "ui.note.maximize": "최대화",
+    "ui.note.exitMaximize": "최대화 해제",
     "ui.note.editNote": "노트 편집",
     "ui.note.search": "검색",
     "ui.note.searchPlaceholder": "노트 검색...",

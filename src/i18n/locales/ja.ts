@@ -245,6 +245,8 @@ export default {
     "ui.note.newNote": "ノートの作成",
     "ui.note.noNotes": "ノートがありません",
     "ui.note.viewNote": "ノートの表示",
+    "ui.note.maximize": "最大化",
+    "ui.note.exitMaximize": "最大化を解除",
     "ui.note.editNote": "ノートの編集",
     "ui.note.search": "検索",
     "ui.note.searchPlaceholder": "ノートを検索...",

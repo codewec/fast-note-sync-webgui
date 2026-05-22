@@ -245,6 +245,8 @@ export default {
     "ui.note.newNote": "New Note",
     "ui.note.noNotes": "No notes yet",
     "ui.note.viewNote": "View Note",
+    "ui.note.maximize": "Maximize",
+    "ui.note.exitMaximize": "Exit Maximize",
     "ui.note.editNote": "Edit Note",
     "ui.note.search": "Search",
     "ui.note.searchPlaceholder": "Search notes...",

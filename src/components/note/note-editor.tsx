@@ -1,6 +1,7 @@
-import { ArrowLeft, Folder, History, RefreshCcw, Check, X, Cloud, Fullscreen, Shrink, Eye, Pencil, Columns2, PanelLeftClose, ArrowLeftRight } from "lucide-react";
+import { ArrowLeft, Folder, History, RefreshCcw, Check, X, Cloud, Fullscreen, Shrink, Eye, Pencil, Columns2, PanelLeftClose, ArrowLeftRight, Maximize, Minimize, Share2 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { useNoteHandle } from "@/components/api-handle/note-handle";
+import { ShareModal } from "@/components/share/share-modal";
 import { Note, NoteDetail } from "@/lib/types/note";
 import { Tooltip } from "@/components/ui/tooltip";
 import { toast } from "@/components/common/Toast";
@@ -55,16 +56,13 @@ export function NoteEditor({
     onNavigateToFolder,
     onSaveSuccess,
     onViewHistory,
-    isMaximized: _isMaximized = false,
-    onToggleMaximize: _onToggleMaximize,
+    isMaximized = false,
+    onToggleMaximize,
     isRecycle = false,
     initialPreviewMode = false,
     onWikiLinkClick,
     defaultFolderPath
 }: NoteEditorProps) {
-    // 保留 isMaximized 和 onToggleMaximize 用于未来最大化功能
-    void _isMaximized;
-    void _onToggleMaximize;
     const { t } = useTranslation();
     const { handleGetNote, handleSaveNote, handleRenameNote } = useNoteHandle();
     const editorRef = useRef<MarkdownEditorRef>(null);
@@ -87,6 +85,7 @@ export function NoteEditor({
     const [isPreviewMode, setIsPreviewMode] = useState(initialPreviewMode);
     const [viewLayout, setViewLayout] = useState<"single" | "split">("single");
     const [splitReversed, setSplitReversed] = useState(false);
+    const [shareModalOpen, setShareModalOpen] = useState(false);
     const titleInputRef = useRef<HTMLInputElement>(null);
 
     // content state 变化时同步 ref（加载笔记、重置时）
@@ -632,6 +631,30 @@ export function NoteEditor({
                             </Button>
                         </Tooltip>
                     )}
+                    {onToggleMaximize && (
+                        <Tooltip content={isMaximized ? t("ui.note.exitMaximize", { defaultValue: "Exit Maximize" }) : t("ui.note.maximize", { defaultValue: "Maximize" })} side="bottom" delay={200}>
+                            <Button
+                                onClick={onToggleMaximize}
+                                variant="outline"
+                                size="icon"
+                                className="rounded-lg sm:rounded-xl h-7 w-7 sm:h-10 sm:w-10"
+                            >
+                                {isMaximized ? <Minimize className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Maximize className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                            </Button>
+                        </Tooltip>
+                    )}
+                    {note && !isRecycle && (
+                        <Tooltip content={t("ui.share.title", { defaultValue: "Share Note" })} side="bottom" delay={200}>
+                            <Button
+                                onClick={() => setShareModalOpen(true)}
+                                variant="outline"
+                                size="icon"
+                                className="rounded-lg sm:rounded-xl h-7 w-7 sm:h-10 sm:w-10"
+                            >
+                                <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </Button>
+                        </Tooltip>
+                    )}
                     <Tooltip content={isFullscreen ? t("ui.note.exitFullscreen") : t("ui.note.fullscreen")} side="bottom" delay={200}>
                         <Button
                             onClick={toggleFullscreen}
@@ -706,6 +729,15 @@ export function NoteEditor({
                     </div>
                 )}
             </div>
+            {note && !isRecycle && (
+                <ShareModal
+                    vault={vault}
+                    path={originalNote?.path || note.path}
+                    pathHash={originalNote?.pathHash || note.pathHash}
+                    open={shareModalOpen}
+                    onOpenChange={setShareModalOpen}
+                />
+            )}
         </div>
     );
 }
