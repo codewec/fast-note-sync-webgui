@@ -45,6 +45,7 @@ interface NoteEditorProps {
     isRecycle?: boolean;
     initialPreviewMode?: boolean;
     onWikiLinkClick?: (target: string) => void;
+    defaultFolderPath?: string;
 }
 
 export function NoteEditor({
@@ -58,7 +59,8 @@ export function NoteEditor({
     onToggleMaximize: _onToggleMaximize,
     isRecycle = false,
     initialPreviewMode = false,
-    onWikiLinkClick
+    onWikiLinkClick,
+    defaultFolderPath
 }: NoteEditorProps) {
     // 保留 isMaximized 和 onToggleMaximize 用于未来最大化功能
     void _isMaximized;
@@ -104,6 +106,19 @@ export function NoteEditor({
         pathRef.current = nextPath;
         setPath(nextPath);
     }, []);
+
+    // 辅助函数：根据完整路径提取文件夹和文件名
+    // Helper function: extract folder and filename from the full path
+    const getDisplayParts = (fullPath: string) => {
+        const lastSlash = fullPath.lastIndexOf('/');
+        if (lastSlash === -1) return { folder: '', filename: fullPath };
+        return {
+            folder: fullPath.substring(0, lastSlash),
+            filename: fullPath.substring(lastSlash + 1)
+        };
+    };
+
+    const { folder, filename } = getDisplayParts(path);
 
     // 执行保存操作
     const doSave = useCallback((currentPath: string, currentContent: string, silent: boolean = false) => {
@@ -157,12 +172,12 @@ export function NoteEditor({
                 setLoading(false);
             });
         } else {
-            updatePath("");
+            updatePath(defaultFolderPath ? (defaultFolderPath + "/") : "");
             setContent("");
             setOriginalNote(null);
             setLoading(false);
         }
-    }, [note, vault, handleGetNote, isRecycle, updatePath, doSave]);
+    }, [note, vault, handleGetNote, isRecycle, updatePath, doSave, defaultFolderPath]);
 
     // 当 note 关键信息变化时进行加载
     useEffect(() => {
@@ -268,19 +283,21 @@ export function NoteEditor({
     }, [isNewNote, isRecycle, doSave, viewLayout]);
 
     // 标题编辑相关
+    // Title editing logic
     const startEditingTitle = useCallback(() => {
         if (isRecycle) return;
-        setEditingTitleValue(path);
+        setEditingTitleValue(filename);
         setIsEditingTitle(true);
         setTimeout(() => titleInputRef.current?.focus(), 0);
-    }, [path, isRecycle]);
+    }, [filename, isRecycle]);
 
     const cancelEditingTitle = useCallback(() => {
         setIsEditingTitle(false);
         setEditingTitleValue("");
     }, []);
     const saveTitle = useCallback(() => {
-        // 只过滤文件系统非法字符，保留空格
+        // 只过滤文件系统非法字符，保留空格并允许输入正斜杠 /
+        // Only filter out illegal characters, keep spaces and forward slash /
         const sanitized = editingTitleValue
             .replace(/[<>:"\\|?*]/g, '')
             .split('')
@@ -294,7 +311,14 @@ export function NoteEditor({
 
         const oldPath = path;
         const oldFullPath = oldPath.endsWith(".md") ? oldPath : oldPath + ".md";
-        const newFullPath = sanitized.endsWith(".md") ? sanitized : sanitized + ".md";
+        
+        // 确定新完整路径，支持通过在标题中输入斜杠移动文件夹
+        // Determine the new full path, supporting folder moves by typing slashes in the title
+        let targetPath = sanitized;
+        if (!sanitized.includes("/")) {
+            targetPath = folder ? (folder + "/" + sanitized) : sanitized;
+        }
+        const newFullPath = targetPath.endsWith(".md") ? targetPath : targetPath + ".md";
 
         if (newFullPath === oldFullPath) {
             setIsEditingTitle(false);
@@ -302,7 +326,7 @@ export function NoteEditor({
         }
 
         if (isNewNote) {
-            updatePath(sanitized);
+            updatePath(targetPath);
             setIsEditingTitle(false);
             return;
         }
@@ -315,11 +339,12 @@ export function NoteEditor({
             oldPathHash: originalNote?.pathHash
         }, () => {
             setSaving(false);
-            updatePath(sanitized);
+            updatePath(targetPath);
             setIsEditingTitle(false);
             setLastSavedAt(new Date());
 
             // 重要：刷新 originalNote 信息，确保后续保存使用新路径
+            // Important: refresh originalNote info to ensure subsequent saves use the new path
             if (originalNote) {
                 setOriginalNote({
                     ...originalNote,
@@ -329,9 +354,10 @@ export function NoteEditor({
             }
 
             // 通知父组件路径变化
+            // Notify parent component of path change
             onSaveSuccess(newFullPath, hashCode(newFullPath));
         });
-    }, [editingTitleValue, path, vault, originalNote, handleRenameNote, updatePath, isNewNote, onSaveSuccess, cancelEditingTitle]);
+    }, [editingTitleValue, path, folder, vault, originalNote, handleRenameNote, updatePath, isNewNote, onSaveSuccess, cancelEditingTitle]);
 
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === "Enter") {
@@ -343,25 +369,29 @@ export function NoteEditor({
     }, [saveTitle, cancelEditingTitle]);
 
     // 新建笔记时的标题输入
+    // Input for title of new notes
     const handleNewNoteTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         // 只过滤非法字符，不 trim，允许输入空格
+        // Only filter out illegal characters for filesystem, keep spaces and don't trim
         const sanitized = e.target.value
             .replace(/[<>:"\\|?*]/g, '')
             .split('')
             .filter(c => c.charCodeAt(0) >= 32)
             .join('');
-        updatePath(sanitized);
-    }, [updatePath]);
+        const prefix = defaultFolderPath ? (defaultFolderPath + "/") : "";
+        updatePath(prefix + sanitized);
+    }, [updatePath, defaultFolderPath]);
 
     // 新建笔记首次保存
+    // First save of new notes
     const handleFirstSave = useCallback(() => {
-        if (!path) {
+        if (!filename) {
             toast.error(t("ui.note.noteTitleRequired"));
             return;
         }
         const currentContent = editorRef.current?.getValue() ?? contentRef.current;
         doSave(path, currentContent, true);
-    }, [path, doSave, t]);
+    }, [filename, path, doSave, t]);
 
     const handleBack = useCallback(() => {
         flushPendingSave();
@@ -375,25 +405,24 @@ export function NoteEditor({
         onBack();
     }, [flushPendingSave, isNewNote, onBack, t]);
 
-    const getDisplayParts = (fullPath: string) => {
-        const lastSlash = fullPath.lastIndexOf('/');
-        if (lastSlash === -1) return { folder: '', filename: fullPath };
-        return {
-            folder: fullPath.substring(0, lastSlash),
-            filename: fullPath.substring(lastSlash + 1)
-        };
-    };
 
-    const { folder, filename } = getDisplayParts(path);
 
     // 渲染标题区域
     const renderTitle = () => {
         // 新建笔记模式 - 直接显示输入框和保存按钮
+        // New note mode - directly show input and save button
         if (isNewNote) {
             return (
                 <div className="flex items-center gap-1 flex-1 min-w-0">
+                    {folder && (
+                        <div className="hidden sm:flex items-center gap-2 shrink-0">
+                            <Folder className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground truncate max-w-37.5">{folder}</span>
+                            <span className="text-muted-foreground">/</span>
+                        </div>
+                    )}
                     <Input
-                        value={path}
+                        value={filename}
                         onChange={handleNewNoteTitleChange}
                         onKeyDown={(e) => e.key === "Enter" && handleFirstSave()}
                         placeholder={t("ui.note.noteTitlePlaceholder")?.replace(" (e.g., note.md)", "").replace(" (例如: note.md)", "")}
@@ -406,7 +435,7 @@ export function NoteEditor({
                         aria-label={t("ui.common.save")}
                         className="self-center h-6 w-6 sm:h-7 sm:w-7 shrink-0"
                         onClick={handleFirstSave}
-                        disabled={!path || saving}
+                        disabled={!filename || saving}
                     >
                         <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>

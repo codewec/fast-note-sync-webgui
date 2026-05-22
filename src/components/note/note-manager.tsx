@@ -288,6 +288,7 @@ export function NoteManager({
                         isRecycle={isRecycle}
                         initialPreviewMode={initialPreviewMode}
                         onWikiLinkClick={handleWikiLinkClick}
+                        defaultFolderPath={currentPath}
                     />
                 )
             )}

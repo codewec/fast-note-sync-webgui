@@ -1,4 +1,4 @@
-import { NotepadText, Trash2, RefreshCw, Plus, Calendar, Clock, ChevronLeft, ChevronRight, History, Search, X, SortDesc, SortAsc, RotateCcw, Eye, Pencil, Folder as FolderIcon, ChevronDown, FolderSearch, TextCursorInput, Share2 } from "lucide-react";
+import { NotepadText, Trash2, RefreshCw, Plus, Calendar, Clock, ChevronLeft, ChevronRight, History, Search, X, SortDesc, SortAsc, RotateCcw, Eye, Pencil, Folder as FolderIcon, ChevronDown, FolderSearch, TextCursorInput, Share2, Library } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConfirmDialog } from "@/components/context/confirm-dialog-context";
@@ -16,6 +16,8 @@ import { Folder } from "@/lib/types/folder";
 import { Note } from "@/lib/types/note";
 import { format } from "date-fns";
 import { ShareModal } from "@/components/share/share-modal";
+import { DndContext, useDraggable, useDroppable, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { cn } from "@/lib/utils";
 
 
 type SearchMode = "path" | "content";
@@ -50,11 +52,171 @@ interface NoteListProps {
     setViewMode: (mode: ViewModeType) => void;
 }
 
+/**
+ * 可拖拽的笔记卡片包装组件 - 支持直接点击拖拽整张卡片
+ * Draggable note card wrapper component - supports dragging the entire card directly
+ */
+interface DraggableNoteCardProps {
+    note: Note;
+    children: React.ReactNode;
+}
+
+function DraggableNoteCard({ note, children }: DraggableNoteCardProps) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: `note-${note.pathHash}`,
+        data: {
+            type: "note",
+            note
+        }
+    });
+
+    const style = {
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+        opacity: isDragging ? 0.4 : undefined,
+        zIndex: isDragging ? 9999 : undefined,
+    };
+
+    return (
+        <div 
+            ref={setNodeRef} 
+            style={style} 
+            {...attributes}
+            {...listeners}
+            className={cn(
+                "w-full cursor-grab active:cursor-grabbing",
+                isDragging && "pointer-events-none"
+            )}
+        >
+            {children}
+        </div>
+    );
+}
+
+/**
+ * 可放置的文件夹卡片包装组件
+ * Droppable folder card wrapper component
+ */
+interface DroppableFolderCardProps {
+    folder: Folder;
+    children: React.ReactNode;
+}
+
+function DroppableFolderCard({ folder, children }: DroppableFolderCardProps) {
+    const { isOver, setNodeRef } = useDroppable({
+        id: `folder-${folder.pathHash}`,
+        data: {
+            type: "folder",
+            folder
+        }
+    });
+
+    return (
+        <div 
+            ref={setNodeRef} 
+            className={cn(
+                "transition-all duration-200 rounded-xl",
+                isOver && "ring-2 ring-primary ring-offset-2 scale-[1.01] bg-primary/5 border-primary/40 shadow-md"
+            )}
+        >
+            {children}
+        </div>
+    );
+}
+
+/**
+ * 可放置的面包屑按钮包装组件
+ * Droppable breadcrumb button wrapper component
+ */
+interface DroppableBreadcrumbButtonProps {
+    path: string;
+    children: React.ReactNode;
+    className?: string;
+}
+
+function DroppableBreadcrumbButton({ path, children, className }: DroppableBreadcrumbButtonProps) {
+    const { isOver, setNodeRef } = useDroppable({
+        id: `breadcrumb-folder-${path || "root"}`,
+        data: {
+            type: "breadcrumb-folder",
+            path
+        }
+    });
+
+    return (
+        <div 
+            ref={setNodeRef} 
+            className={cn(
+                // 默认使用紧凑内边距 px-2 py-0.5，与文字对齐；加上 select-none 优化交互体验
+                // Default to tight px-2 py-0.5 padding for visual alignment; add select-none to optimize drag feel
+                "inline-flex items-center transition-all duration-200 rounded-md px-2 py-0.5 border border-transparent text-xs sm:text-sm select-none",
+                className,
+                // 当拖拽悬停时变大并高亮，并赋予 z-40 确保绝对覆盖下方卡片，不受层叠上下文干扰
+                // Scale up slightly and highlight when dragged over, add relative z-40 to prevent overlapping issues from lower cards
+                isOver && "bg-primary/10 text-primary scale-[1.03] border-primary/20 shadow-sm relative z-40"
+            )}
+        >
+            {children}
+        </div>
+    );
+}
+
+
 export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateNote, page, setPage, pageSize, setPageSize, onViewHistory, isRecycle = false, searchKeyword, setSearchKeyword, currentPath, setCurrentPath, currentPathHash, setCurrentPathHash, pathHashMap, setPathHashMap, shareFilter, setShareFilter, viewMode, setViewMode }: NoteListProps) {
     const { t } = useTranslation();
     const { handleNoteList, handleDeleteNote, handleRestoreNote, handleFolderList, handleFolderNotes, handlePermanentDeleteNote, handleClearNoteRecycle, handleRenameNote, handleNoteListByPaths } = useNoteHandle();
     const { handleGetNoteSharePaths } = useShareHandle();
     const { openConfirmDialog } = useConfirmDialog();
+
+    // 拖拽传感器配置，加上 8px 移动判定以过滤普通的笔记点击阅读
+    // Drag sensors configuration, with 8px constraint to filter normal clicks for reading notes
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        })
+    );
+
+    // 处理笔记拖拽至子目录或面包屑导航（笔记库根目录/上级目录）的放置逻辑
+    // Handle drop logic of dragging notes to subfolders or breadcrumb navigation (vault root/parent folders)
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over) return;
+
+        const activeData = active.data.current;
+        const overData = over.data.current;
+
+        if (activeData?.type === "note") {
+            const dragNote = activeData.note as Note;
+            const filename = dragNote.path.split("/").pop() || "";
+            let targetPath: string | null = null;
+
+            if (overData?.type === "folder") {
+                const targetFolder = overData.folder as Folder;
+                targetPath = targetFolder.path;
+            } else if (overData?.type === "breadcrumb-folder") {
+                targetPath = overData.path; // targetPath is "" for vault root
+            }
+
+            if (targetPath === null) return;
+
+            // 如果 targetPath 是空字符串，表示移动到笔记库根目录；否则移动到对应相对路径子目录
+            // If targetPath is an empty string, it means moving to the vault root; otherwise, moving to the subfolder
+            const newFullPath = targetPath === "" ? filename : targetPath + "/" + filename;
+
+            if (newFullPath === dragNote.path) return;
+
+            handleRenameNote({
+                vault,
+                oldPath: dragNote.path,
+                path: newFullPath,
+                oldPathHash: dragNote.pathHash
+            }, () => {
+                fetchNotes();
+            });
+        }
+    };
+
     const [notes, setNotes] = useState<Note[]>([]);
     const [loading, setLoading] = useState(false);
     const [totalRows, setTotalRows] = useState(0);
@@ -216,31 +378,32 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
     };
 
     /**
-     * 重命名笔记
+     * 重命名笔记并支持移动文件夹
+     * Rename the note and support moving between folders
      */
     const onRename = (e: React.MouseEvent, note: Note) => {
         e.stopPropagation();
-        const fullFileName = note.path.split("/").pop() || "";
-        const extension = fullFileName.includes(".") ? fullFileName.substring(fullFileName.lastIndexOf(".")) : ".md";
-        const baseName = fullFileName.includes(".") ? fullFileName.substring(0, fullFileName.lastIndexOf(".")) : fullFileName;
-        let newName = baseName;
+        
+        // 提取扩展名与不含扩展名的完整相对路径
+        // Extract file extension and the full relative path without extension
+        const extension = note.path.includes(".") ? note.path.substring(note.path.lastIndexOf(".")) : ".md";
+        const baseRelativePath = note.path.includes(".") ? note.path.substring(0, note.path.lastIndexOf(".")) : note.path;
+        let newPath = baseRelativePath;
 
         openConfirmDialog(
             t("ui.note.renameNote"),
             "confirm",
             () => {
-                if (!newName || newName === baseName) return;
+                if (!newPath || newPath === baseRelativePath) return;
 
-                const finalName = newName.endsWith(extension) ? newName : newName + extension;
-
-                const oldDir = note.path.includes("/")
-                    ? note.path.substring(0, note.path.lastIndexOf("/") + 1)
-                    : "";
+                // 拼接新相对路径的扩展名
+                // Combine the new relative path with its file extension
+                const finalPath = newPath.endsWith(extension) ? newPath : newPath + extension;
 
                 handleRenameNote({
                     vault,
                     oldPath: note.path,
-                    path: oldDir + finalName,
+                    path: finalPath,
                     oldPathHash: note.pathHash
                 }, () => {
                     fetchNotes();
@@ -249,10 +412,10 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
             <div className="pt-2">
                 <Input
                     autoFocus
-                    defaultValue={baseName}
+                    defaultValue={baseRelativePath}
                     placeholder={t("ui.note.renameNotePlaceholder")}
                     onChange={(e) => {
-                        newName = e.target.value;
+                        newPath = e.target.value;
                     }}
                 />
             </div>
@@ -640,267 +803,313 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                 </div>
             )}
 
-            {/* 面包屑导航 - 仅在目录模式且无分享筛选时显示 */}
-            {viewMode === "folder" && !isRecycle && currentPath && !shareFilter && (
-                <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground overflow-x-auto whitespace-nowrap scrollbar-hide">
-                    <button
-                        className="hover:text-primary transition-colors flex items-center"
-                        onClick={() => {
-                            setCurrentPath("");
-                            setCurrentPathHash("");
-                            setPage(1);
-                        }}
+            {/* 启用拖拽上下文包裹面包屑导航与列表 */}
+            {/* Enable Drag & Drop context wrapping breadcrumbs and lists */}
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                {/* 面包屑导航 - 仅在目录模式且无分享筛选时显示 */}
+                {/* Breadcrumbs navigation - only displayed in folder mode without active share filter */}
+                {viewMode === "folder" && !isRecycle && currentPath && !shareFilter && (
+                    <div 
+                        // 面包屑容器使用 py-2 提供变大安全区域，使用 mb-4 拉开下部间距，并使用 z-30 提供层级保护
+                        // Breadcrumbs wrapper uses py-2 for scale breathing room, mb-4 for visual gap, and z-30 for layout layering
+                        className="flex items-center gap-2 px-1.5 py-2 mb-4 text-sm text-muted-foreground overflow-x-auto whitespace-nowrap scrollbar-hide relative z-30"
                     >
-                        {vault}
-                    </button>
-                    {currentPath.split("/").filter(Boolean).map((part, index, arr) => (
-                        <React.Fragment key={`breadcrumb-${index}`}>
-                            <ChevronRight className="h-4 w-4 shrink-0" />
+                        {/* 笔记库根目录，包装为 Droppable 容器以接受拖放移动到根目录 */}
+                        {/* Vault root folder, wrapped as a droppable container to accept dropping to move to root */}
+                        <DroppableBreadcrumbButton path="" className="flex items-center gap-1">
                             <button
-                                className={`transition-colors ${index === arr.length - 1 ? "text-foreground font-medium pointer-events-none" : "hover:text-primary"}`}
+                                className="hover:text-primary transition-colors flex items-center gap-1 text-xs sm:text-sm"
                                 onClick={() => {
-                                    const path = arr.slice(0, index + 1).join("/");
-                                    setCurrentPath(path);
-                                    setCurrentPathHash(pathHashMap[path] || "");
+                                    setCurrentPath("");
+                                    setCurrentPathHash("");
                                     setPage(1);
                                 }}
                             >
-                                {part}
+                                <Library className="h-4 w-4 shrink-0 mr-1" />
+                                <span>{vault}</span>
                             </button>
-                        </React.Fragment>
-                    ))}
-                </div>
-            )}
+                        </DroppableBreadcrumbButton>
+                        {currentPath.split("/").filter(Boolean).map((part, index, arr) => (
+                            <React.Fragment key={`breadcrumb-${index}`}>
+                                <ChevronRight className="h-4 w-4 shrink-0" />
+                                {index === arr.length - 1 ? (
+                                    /* 最后一级为当前文件夹目录，采用对应的 px-2 py-0.5 以确保与前几级节点基线和高度绝对对齐 */
+                                    /* The last level is the current folder directory. Adopt matching px-2 py-0.5 to keep baseline and heights strictly aligned */
+                                    <span className="px-2 py-0.5 text-foreground font-medium text-xs sm:text-sm select-none">
+                                        {part}
+                                    </span>
+                                ) : (
+                                    /* 上级子目录，包装为 Droppable 容器以接受拖动移动到该目录下 */
+                                    /* Parent subfolders, wrapped as a droppable container to accept dropping to move under this folder */
+                                    <DroppableBreadcrumbButton path={arr.slice(0, index + 1).join("/")}>
+                                        <button
+                                            className="hover:text-primary transition-colors flex items-center text-xs sm:text-sm"
+                                            onClick={() => {
+                                                const path = arr.slice(0, index + 1).join("/");
+                                                setCurrentPath(path);
+                                                setCurrentPathHash(pathHashMap[path] || "");
+                                                setPage(1);
+                                            }}
+                                        >
+                                            {part}
+                                        </button>
+                                    </DroppableBreadcrumbButton>
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                )}
 
-            {/* 笔记及目录列表 */}
-            {loading ? (
-                <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
-                    <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
-                    {batchRestoreProgress
-                        ? `${batchRestoreProgress.current} / ${batchRestoreProgress.total}`
-                        : t("ui.common.loading")}
-                </div>
-            ) : (!Array.isArray(notes) || notes.length === 0) && (!Array.isArray(folders) || folders.length === 0 || viewMode === "flat") ? (
-                <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
-                    {t("ui.note.noNotes")}
-                </div>
-            ) : (
-                <div className="-mx-2 px-2">
-                    <div className="grid grid-cols-1 gap-3 py-1">
-                        {/* 目录列表 */}
-                        {viewMode === "folder" && !isRecycle && folders.map((folder) => (
-                            <article
-                                key={`folder-${folder.pathHash}`}
-                                className="rounded-xl border border-border bg-card p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30"
-                                onClick={() => {
-                                    setPathHashMap({ ...pathHashMap, [folder.path]: folder.pathHash });
-                                    setCurrentPath(folder.path);
-                                    setCurrentPathHash(folder.pathHash);
-                                    setPage(1);
-                                }}
-                            >
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 shrink-0">
-                                            <FolderIcon className="h-5 w-5 fill-current opacity-70" />
-                                        </span>
-                                        <div className="min-w-0 flex-1">
-                                            <h3 className="font-semibold text-card-foreground truncate">
-                                                {folder.path.split("/").pop()}
-                                            </h3>
-                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                                                <Tooltip content={t("ui.common.createdAt")} side="top" delay={300}>
-                                                    <span className="hidden sm:flex items-center gap-1">
-                                                        <Calendar className="h-3.5 w-3.5" />
-                                                        {format(new Date(folder.ctime), "yyyy-MM-dd HH:mm")}
-                                                    </span>
-                                                </Tooltip>
-                                                <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="h-3.5 w-3.5" />
-                                                        {format(new Date(folder.mtime), "yyyy-MM-dd HH:mm")}
-                                                    </span>
-                                                </Tooltip>
+                {/* 笔记及目录列表 */}
+                {loading ? (
+                    <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
+                        <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                        {batchRestoreProgress
+                            ? `${batchRestoreProgress.current} / ${batchRestoreProgress.total}`
+                            : t("ui.common.loading")}
+                    </div>
+                ) : (!Array.isArray(notes) || notes.length === 0) && (!Array.isArray(folders) || folders.length === 0 || viewMode === "flat") ? (
+                    <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
+                        {t("ui.note.noNotes")}
+                    </div>
+                ) : (
+                    <div 
+                        // 为下方内容容器显式添加 relative z-10，配合上方 z-30 面包屑进行完美物理隔离
+                        // Explicitly add relative z-10 for the content list container, isolating it from the z-30 breadcrumbs
+                        className="-mx-2 px-2 relative z-10"
+                    >
+                        <div className="grid grid-cols-1 gap-3 py-1">
+                            {/* 目录列表 */}
+                            {viewMode === "folder" && !isRecycle && folders.map((folder) => (
+                                <DroppableFolderCard key={`folder-droppable-${folder.pathHash}`} folder={folder}>
+                                    <article
+                                        className="rounded-xl border border-border bg-card p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30"
+                                        onClick={() => {
+                                            setPathHashMap({ ...pathHashMap, [folder.path]: folder.pathHash });
+                                            setCurrentPath(folder.path);
+                                            setCurrentPathHash(folder.pathHash);
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 shrink-0">
+                                                    <FolderIcon className="h-5 w-5 fill-current opacity-70" />
+                                                </span>
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="font-semibold text-card-foreground truncate">
+                                                        {folder.path.split("/").pop()}
+                                                    </h3>
+                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                                                        <Tooltip content={t("ui.common.createdAt")} side="top" delay={300}>
+                                                            <span className="hidden sm:flex items-center gap-1">
+                                                                <Calendar className="h-3.5 w-3.5" />
+                                                                {format(new Date(folder.ctime), "yyyy-MM-dd HH:mm")}
+                                                            </span>
+                                                        </Tooltip>
+                                                        <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
+                                                            <span className="flex items-center gap-1">
+                                                                <Clock className="h-3.5 w-3.5" />
+                                                                {format(new Date(folder.mtime), "yyyy-MM-dd HH:mm")}
+                                                            </span>
+                                                        </Tooltip>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="shrink-0">
+                                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="shrink-0">
-                                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                    </div>
-                                </div>
-                            </article>
-                        ))}
+                                    </article>
+                                </DroppableFolderCard>
+                            ))}
 
-                        {/* 笔记列表 */}
-                        {Array.isArray(notes) && notes.map((note) => {
-                            const noteIsShared = !isRecycle && activeSharePaths.has(note.path);
-                            return (<article
-                                key={`note-${note.pathHash}`}
-                                className="rounded-xl border border-border bg-card p-2.5 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30"
-                                onClick={() => onSelectNote(note, true)}
-                            >
-                                <div className="flex items-center justify-between gap-2 sm:gap-4">
-                                    {/* 左侧：图标和内容 */}
-                                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                                        {isRecycle && (
-                                            <div
-                                                className="flex items-center self-center"
-                                                onClick={(e) => toggleSelect(e, note.pathHash)}
-                                            >
-                                                <Checkbox
-                                                    checked={selectedPaths.has(note.pathHash)}
-                                                    className="rounded-md"
-                                                />
-                                            </div>
-                                        )}
-                                        <span className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
-                                            <NotepadText className="h-4 w-4 sm:h-5 sm:w-5" />
-                                        </span>
-                                        <div className="min-w-0 flex-1">
-                                            <h3 className="font-semibold text-card-foreground truncate flex items-center gap-1">
-                                                <span className="truncate">{(viewMode === "folder" && !isRecycle && !shareFilter ? note.path.split("/").pop() : note.path)?.replace(/\.md$/, "")}</span>
-                                                {noteIsShared && (
-                                                    <Share2 className="h-3 w-3 text-green-500 shrink-0" />
+                            {/* 笔记列表 */}
+                            {/* Note list */}
+                            {Array.isArray(notes) && notes.map((note) => {
+                                const noteIsShared = !isRecycle && activeSharePaths.has(note.path);
+                                const cardContent = (
+                                    <article
+                                        key={`note-${note.pathHash}`}
+                                        className="rounded-xl border border-border bg-card p-2.5 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30 w-full"
+                                        onClick={() => onSelectNote(note, true)}
+                                    >
+                                        <div className="flex items-center justify-between gap-2 sm:gap-4">
+                                            {/* 左侧：图标和内容 */}
+                                            {/* Left: Icon and content */}
+                                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                {isRecycle && (
+                                                    <div
+                                                        className="flex items-center self-center"
+                                                        onClick={(e) => toggleSelect(e, note.pathHash)}
+                                                    >
+                                                        <Checkbox
+                                                            checked={selectedPaths.has(note.pathHash)}
+                                                            className="rounded-md"
+                                                        />
+                                                    </div>
                                                 )}
-                                            </h3>
-                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                                                <Tooltip content={t("ui.common.createdAt")} side="top" delay={300}>
-                                                    <span className="hidden sm:flex items-center gap-1">
-                                                        <Calendar className="h-3.5 w-3.5" />
-                                                        {format(new Date(note.ctime), "yyyy-MM-dd HH:mm")}
-                                                    </span>
+                                                <span className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                                                    <NotepadText className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                </span>
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="font-semibold text-card-foreground truncate flex items-center gap-1">
+                                                        <span className="truncate">{(viewMode === "folder" && !isRecycle && !shareFilter ? note.path.split("/").pop() : note.path)?.replace(/\.md$/, "")}</span>
+                                                        {noteIsShared && (
+                                                            <Share2 className="h-3 w-3 text-green-500 shrink-0" />
+                                                        )}
+                                                    </h3>
+                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                                                        <Tooltip content={t("ui.common.createdAt")} side="top" delay={300}>
+                                                            <span className="hidden sm:flex items-center gap-1">
+                                                                <Calendar className="h-3.5 w-3.5" />
+                                                                {format(new Date(note.ctime), "yyyy-MM-dd HH:mm")}
+                                                            </span>
+                                                        </Tooltip>
+                                                        <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
+                                                            <span className="flex items-center gap-1">
+                                                                <Clock className="h-3.5 w-3.5" />
+                                                                <span className="sm:hidden">{format(new Date(note.mtime), "MM-dd HH:mm")}</span>
+                                                                <span className="hidden sm:inline">{format(new Date(note.mtime), "yyyy-MM-dd HH:mm")}</span>
+                                                            </span>
+                                                        </Tooltip>
+                                                        {note.version > 0 && (
+                                                            <Tooltip content={t("ui.history.title")} side="top" delay={300}>
+                                                                <span className="flex items-center gap-1">
+                                                                    <History className="h-3.5 w-3.5" />
+                                                                    v{note.version}
+                                                                </span>
+                                                            </Tooltip>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* 右侧：操作按钮 */}
+                                            {/* Right: Actions */}
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                <Tooltip content={t("ui.note.viewNote")} side="top" delay={200}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-primary"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onSelectNote(note, true);
+                                                        }}
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
                                                 </Tooltip>
-                                                <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="h-3.5 w-3.5" />
-                                                        <span className="sm:hidden">{format(new Date(note.mtime), "MM-dd HH:mm")}</span>
-                                                        <span className="hidden sm:inline">{format(new Date(note.mtime), "yyyy-MM-dd HH:mm")}</span>
-                                                    </span>
+                                                <Tooltip content={t("ui.note.editNote")} side="top" delay={200}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-600"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onSelectNote(note, false);
+                                                        }}
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
                                                 </Tooltip>
-                                                {note.version > 0 && (
-                                                    <Tooltip content={t("ui.history.title")} side="top" delay={300}>
-                                                        <span className="flex items-center gap-1">
-                                                            <History className="h-3.5 w-3.5" />
-                                                            v{note.version}
-                                                        </span>
+                                                <Tooltip content={t("ui.history.title")} side="top" delay={200}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-purple-600"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onViewHistory(note);
+                                                        }}
+                                                    >
+                                                        <History className="h-4 w-4" />
+                                                    </Button>
+                                                </Tooltip>
+                                                {!isRecycle && (
+                                                    <Tooltip content={t("ui.common.rename")} side="top" delay={200}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-500"
+                                                            onClick={(e) => onRename(e, note)}
+                                                        >
+                                                            <TextCursorInput className="h-4 w-4" />
+                                                        </Button>
                                                     </Tooltip>
                                                 )}
+                                                {!isRecycle && (
+                                                    <Tooltip content={t("ui.share.title")} side="top" delay={200}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className={`h-7 w-7 sm:h-8 sm:w-8 rounded-xl ${noteIsShared ? "text-green-600 hover:text-green-700 bg-green-500/10" : "text-muted-foreground hover:text-primary"}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedShareNote(note);
+                                                                setShareModalOpen(true);
+                                                            }}
+                                                        >
+                                                            <Share2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </Tooltip>
+                                                )}
+                                                {!isRecycle && (
+                                                    <Tooltip content={t("ui.common.delete")} side="top" delay={200}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-destructive"
+                                                            onClick={(e) => onDelete(e, note)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </Tooltip>
+                                                )}
+                                                {isRecycle && (
+                                                    <>
+                                                        <Tooltip content={t("ui.common.restore")} side="top" delay={200}>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-green-600"
+                                                                onClick={(e) => onRestore(e, note)}
+                                                            >
+                                                                <RotateCcw className="h-4 w-4" />
+                                                            </Button>
+                                                        </Tooltip>
+                                                        <Tooltip content={t("ui.common.permanentDelete")} side="top" delay={200}>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive"
+                                                                onClick={(e) => onPermanentDelete(e, note)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </Tooltip>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
+                                    </article>
+                                );
 
-                                    {/* 右侧：操作按钮 */}
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        <Tooltip content={t("ui.note.viewNote")} side="top" delay={200}>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-primary"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onSelectNote(note, true);
-                                                }}
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                        </Tooltip>
-                                        <Tooltip content={t("ui.note.editNote")} side="top" delay={200}>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-600"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onSelectNote(note, false);
-                                                }}
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                        </Tooltip>
-                                        <Tooltip content={t("ui.history.title")} side="top" delay={200}>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-purple-600"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onViewHistory(note);
-                                                }}
-                                            >
-                                                <History className="h-4 w-4" />
-                                            </Button>
-                                        </Tooltip>
-                                        {!isRecycle && (
-                                            <Tooltip content={t("ui.common.rename")} side="top" delay={200}>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-500"
-                                                    onClick={(e) => onRename(e, note)}
-                                                >
-                                                    <TextCursorInput className="h-4 w-4" />
-                                                </Button>
-                                            </Tooltip>
-                                        )}
-                                        {!isRecycle && (
-                                            <Tooltip content={t("ui.share.title")} side="top" delay={200}>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className={`h-7 w-7 sm:h-8 sm:w-8 rounded-xl ${noteIsShared ? "text-green-600 hover:text-green-700 bg-green-500/10" : "text-muted-foreground hover:text-primary"}`}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSelectedShareNote(note);
-                                                        setShareModalOpen(true);
-                                                    }}
-                                                >
-                                                    <Share2 className="h-4 w-4" />
-                                                </Button>
-                                            </Tooltip>
-                                        )}
-                                        {!isRecycle && (
-                                            <Tooltip content={t("ui.common.delete")} side="top" delay={200}>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-destructive"
-                                                    onClick={(e) => onDelete(e, note)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </Tooltip>
-                                        )}
-                                        {isRecycle && (
-                                            <>
-                                                <Tooltip content={t("ui.common.restore")} side="top" delay={200}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-green-600"
-                                                        onClick={(e) => onRestore(e, note)}
-                                                    >
-                                                        <RotateCcw className="h-4 w-4" />
-                                                    </Button>
-                                                </Tooltip>
-                                                <Tooltip content={t("ui.common.permanentDelete")} side="top" delay={200}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive"
-                                                        onClick={(e) => onPermanentDelete(e, note)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </Tooltip>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            </article>
-                        );})}
+                                return isRecycle ? (
+                                    <React.Fragment key={`note-${note.pathHash}`}>
+                                        {cardContent}
+                                    </React.Fragment>
+                                ) : (
+                                    <DraggableNoteCard key={`note-draggable-${note.pathHash}`} note={note}>
+                                        {cardContent}
+                                    </DraggableNoteCard>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </DndContext>
 
             {/* 分页控制 */}
             {notes.length > 0 && (
