@@ -88,7 +88,7 @@ export function ThemeSwitcher({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={cn("size-9", className)}
+                        className={cn("size-9 hover:bg-accent/50 hover:text-foreground data-[state=open]:ring-2 data-[state=open]:ring-ring", className)}
                         aria-label={ariaLabel ?? t("ui.common.toggleTheme")}
                         title={titleText}
                     >

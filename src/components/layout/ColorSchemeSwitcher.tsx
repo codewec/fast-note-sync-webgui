@@ -25,7 +25,7 @@ export function ColorSchemeSwitcher({ className, isShare = false }: ColorSchemeS
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={cn("size-9", className)}
+                    className={cn("size-9 hover:bg-accent/50 hover:text-foreground data-[state=open]:ring-2 data-[state=open]:ring-ring", className)}
                     aria-label={t("ui.settings.colorScheme")}
                 >
                     <Palette className="size-5" />

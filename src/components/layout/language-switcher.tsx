@@ -21,7 +21,11 @@ export function LanguageSwitcher({ className, showText = false, storageKey = "la
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size={showText ? "default" : "icon"} className={className}>
+                <Button 
+                    variant="ghost" 
+                    size={showText ? "default" : "icon"} 
+                    className={`hover:bg-accent/50 hover:text-foreground data-[state=open]:ring-2 data-[state=open]:ring-ring ${className || ""}`}
+                >
                     <Languages className={showText ? "mr-2 h-4 w-4" : "h-5 w-5"} />
                     {showText && t("ui.common.switchLanguage")}
                 </Button>
