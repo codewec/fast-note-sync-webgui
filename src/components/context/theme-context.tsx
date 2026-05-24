@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 
-type Theme = 'light' | 'dark' | 'system' | 'auto';
+type Theme = 'system' | 'auto' | 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;

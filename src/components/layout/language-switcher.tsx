@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { changeLang } from "@/i18n/utils";
 import { Languages } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { useDropdownTooltip } from "@/hooks/use-dropdown-tooltip";
 
 
 interface LanguageSwitcherProps {
@@ -14,21 +17,36 @@ interface LanguageSwitcherProps {
 export function LanguageSwitcher({ className, showText = false, storageKey = "lang" }: LanguageSwitcherProps) {
     const { t } = useTranslation();
 
+    const [isOpen, setIsOpen] = useState(false)
+    const { buttonRef, tooltipElement, handleMouseEnter, handleMouseLeave } = useDropdownTooltip(t("ui.common.switchLanguage"))
+
     const handleSwitch = (lang: string) => {
         changeLang(lang, storageKey);
     };
 
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size={showText ? "default" : "icon"} className={className}>
-                    <Languages className={showText ? "mr-2 h-4 w-4" : "h-5 w-5"} />
-                    {showText && t("ui.common.switchLanguage")}
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-[300px] overflow-y-auto">
-                <DropdownMenuItem onClick={() => handleSwitch("en")}>🇺🇸 English</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSwitch("zh-CN")}>🇨🇳 简体中文</DropdownMenuItem>
+        <>
+            <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+                <DropdownMenuTrigger asChild>
+                    <Button 
+                        ref={buttonRef}
+                        variant="ghost" 
+                        size={showText ? "default" : "icon"} 
+                        className={cn(
+                            "hover:bg-accent/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-0",
+                            isOpen && "ring-2 ring-ring",
+                            className
+                        )}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                    >
+                        <Languages className={showText ? "mr-2 h-4 w-4" : "h-5 w-5"} />
+                        {showText && t("ui.common.switchLanguage")}
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-h-[300px] overflow-y-auto">
+                    <DropdownMenuItem onClick={() => handleSwitch("en")}>🇺🇸 English</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSwitch("zh-CN")}>🇨🇳 简体中文</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleSwitch("zh-TW")}>🇭🇰 繁體中文</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleSwitch("ja")}>🇯🇵 日本語</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleSwitch("ko")}>🇰🇷 한국어</DropdownMenuItem>
@@ -61,6 +79,8 @@ export function LanguageSwitcher({ className, showText = false, storageKey = "la
                 <DropdownMenuItem onClick={() => changeLang("sq")}>🇦🇱 Shqip</DropdownMenuItem>
                 */}
             </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenu>
+            {typeof document !== 'undefined' && tooltipElement}
+        </>
     );
 }
