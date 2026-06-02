@@ -238,6 +238,8 @@ export default {
     "ui.vault.createVaultFirst": "請先創建一個筆記庫，然後再進行管理",
     "ui.vault.goToVaultManagement": "前往筆記庫管理",
     "ui.vault.setAsDefault": "設為默認",
+    "ui.vault.rebuildIndex": "重建全文搜尋索引",
+    "ui.vault.rebuildIndexConfirm": "確定要重建該筆記庫的全文搜尋索引嗎？此操作將重新掃描並索引所有筆記。",
 
     // --- ui.note ---
     "ui.note.note": "筆記",
@@ -882,5 +884,8 @@ export default {
     "ui.syncLog.action.delete": "永久刪除",
     "ui.syncLog.action.rename": "重新命名",
     "ui.syncLog.action.restore": "還原",
+    "ui.file.upload": "上傳附件",
+    "ui.file.uploading": "上傳中...",
+    "ui.file.uploadSuccess": "附件上傳成功",
 };
 

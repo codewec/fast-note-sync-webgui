@@ -238,6 +238,8 @@ export default {
     "ui.vault.createVaultFirst": "请先创建一个笔记库,然后再进行管理",
     "ui.vault.goToVaultManagement": "前往笔记库管理",
     "ui.vault.setAsDefault": "设为默认",
+    "ui.vault.rebuildIndex": "重建全文搜索索引",
+    "ui.vault.rebuildIndexConfirm": "确定要重建该笔记库的全文搜索索引吗？此操作将重新扫描并索引所有笔记。",
 
     // --- ui.note ---
     "ui.note.note": "笔记",
@@ -882,5 +884,8 @@ export default {
     "ui.syncLog.action.delete": "永久删除",
     "ui.syncLog.action.rename": "重命名",
     "ui.syncLog.action.restore": "恢复",
+    "ui.file.upload": "上传附件",
+    "ui.file.uploading": "上传中...",
+    "ui.file.uploadSuccess": "附件上传成功",
 };
 

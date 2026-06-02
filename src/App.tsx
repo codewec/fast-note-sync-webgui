@@ -57,6 +57,7 @@ function App() {
 
   const [vaultsLoaded, setVaultsLoaded] = useState(false)
   const [registerIsEnable, setRegisterIsEnable] = useState(true)
+  const [ftsBleveEnabled, setFtsBleveEnabled] = useState(true)
   const [adminUid, setAdminUid] = useState<number | null>(null)
   const [configLoaded, setConfigLoaded] = useState(false)
 
@@ -180,6 +181,9 @@ function App() {
           onFontsUpdate(res.data.fontSet || res.data.FontSet || "")
           if (res.data.registerIsEnable !== undefined) {
             setRegisterIsEnable(res.data.registerIsEnable)
+          }
+          if (res.data.ftsBleveEnabled !== undefined) {
+            setFtsBleveEnabled(res.data.ftsBleveEnabled)
           }
         }
       }
@@ -330,6 +334,7 @@ function App() {
       default:
         return (
           <VaultList
+            ftsBleveEnabled={ftsBleveEnabled}
             onNavigateToNotes={(vaultName) => {
               setActiveVault(vaultName)
               localStorage.setItem("noteViewMode", "folder")

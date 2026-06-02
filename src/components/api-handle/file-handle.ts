@@ -400,6 +400,71 @@ export function useFileHandle() {
         }
     }, [getHeaders, handleTokenExpired])
 
+    /**
+     * 上传附件
+     * Upload an attachment
+     * @param vault 仓库名称 / Vault name
+     * @param path 文件相对路径 / Relative file path
+     * @param file 物理文件对象 / Physical File object
+     * @param callback 成功回调 / Success callback
+     */
+    const handleFileUpload = useCallback(async (
+        vault: string,
+        path: string,
+        file: File,
+        callback: (data: any | null) => void
+    ) => {
+        try {
+            const formData = new FormData();
+            formData.append("vault", vault);
+            formData.append("path", path);
+            formData.append("file", file);
+            const fileTime = file.lastModified || Date.now();
+            formData.append("ctime", fileTime.toString());
+            formData.append("mtime", fileTime.toString());
+
+            const apiUrl = env.API_URL.endsWith("/") ? env.API_URL.slice(0, -1) : env.API_URL;
+            const headers = getHeaders();
+            if ("Content-Type" in headers) {
+                delete headers["Content-Type"];
+            }
+
+            const response = await fetch(addCacheBuster(`${apiUrl}/api/file`), {
+                method: "POST",
+                body: formData,
+                headers: headers,
+            });
+
+            if (!response.ok) {
+                if (response.status === 508) {
+                    handleTokenExpired();
+                } else {
+                    toast.error("Network response was not ok");
+                }
+                callback(null);
+                return;
+            }
+
+            const res: { code: number; message: string; data?: any } = await response.json();
+
+            if (res.code > 0 && res.code <= 200) {
+                toast.success(res.message);
+                callback(res.data || {});
+            } else {
+                if (res.code === 508) {
+                    handleTokenExpired();
+                } else {
+                    toast.error(res.message);
+                }
+                callback(null);
+            }
+        } catch (error: unknown) {
+            console.error("handleFileUpload error:", error);
+            toast.error(error instanceof Error ? error.message : String(error));
+            callback(null);
+        }
+    }, [getHeaders, handleTokenExpired]);
+
     return useMemo(() => ({
         handleFileList,
         handleDeleteFile,
@@ -410,6 +475,7 @@ export function useFileHandle() {
         getRawFileUrl,
         handleFolderList,
         handleFolderFiles,
+        handleFileUpload,
     }), [
         handleFileList,
         handleDeleteFile,
@@ -420,5 +486,6 @@ export function useFileHandle() {
         getRawFileUrl,
         handleFolderList,
         handleFolderFiles,
+        handleFileUpload,
     ]);
 }

@@ -238,6 +238,8 @@ export default {
     "ui.vault.createVaultFirst": "Please create a vault first, then manage it",
     "ui.vault.goToVaultManagement": "Go to Vault Management",
     "ui.vault.setAsDefault": "Set as Default",
+    "ui.vault.rebuildIndex": "Rebuild Full-Text Search Index",
+    "ui.vault.rebuildIndexConfirm": "Are you sure you want to rebuild the full-text search index for this vault? This will rescan and reindex all notes.",
 
     // --- ui.note ---
     "ui.note.note": "Note",
@@ -882,5 +884,8 @@ export default {
     "ui.syncLog.action.delete": "Permanent Delete",
     "ui.syncLog.action.rename": "Rename",
     "ui.syncLog.action.restore": "Restore",
+    "ui.file.upload": "Upload Attachment",
+    "ui.file.uploading": "Uploading...",
+    "ui.file.uploadSuccess": "Attachment uploaded successfully",
 };
 

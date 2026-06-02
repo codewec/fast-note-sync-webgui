@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Plus, Key, Globe, Monitor, Library, RefreshCw, Check, X, Search, GripVertical, FileText, Paperclip, HardDrive, Wifi, Clock } from "lucide-react";
+import { Pencil, Trash2, Plus, Key, Globe, Monitor, Library, RefreshCw, Check, X, Search, GripVertical, FileText, Paperclip, HardDrive, Wifi, Clock, ScanText } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, rectSortingStrategy } from "@dnd-kit/sortable";
 import { TokenManager, TokenManagerHandle } from "@/components/user/token-manager";
@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 interface VaultListProps {
   onNavigateToNotes?: (vaultName: string) => void;
   onNavigateToAttachments?: (vaultName: string) => void;
+  ftsBleveEnabled?: boolean;
 }
 
 // 可排序的仓库卡片组件
@@ -37,6 +38,8 @@ interface SortableVaultCardProps {
   onNavigateToAttachments?: (vaultName: string) => void;
   formatBytes: (bytes: string | number | undefined) => string;
   t: (key: string, options?: Record<string, unknown>) => string;
+  ftsBleveEnabled?: boolean;
+  onRebuildIndex: (id: string | number) => void;
 }
 
 function SortableVaultCard({
@@ -53,6 +56,8 @@ function SortableVaultCard({
   onNavigateToAttachments,
   formatBytes,
   t,
+  ftsBleveEnabled,
+  onRebuildIndex,
 }: SortableVaultCardProps) {
   const {
     attributes,
@@ -266,6 +271,21 @@ function SortableVaultCard({
             </Tooltip>
 
             <div className="flex items-center gap-1">
+              {ftsBleveEnabled && (
+                <Tooltip content={t("ui.vault.rebuildIndex")} side="top">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-xl text-muted-foreground/60 hover:text-primary hover:bg-primary/5"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onRebuildIndex(vault.id)
+                    }}
+                  >
+                    <ScanText className="h-3.5 w-3.5" />
+                  </Button>
+                </Tooltip>
+              )}
               <Tooltip content={t("ui.vault.edit")} side="top">
                 <Button
                   variant="ghost"
@@ -300,7 +320,7 @@ function SortableVaultCard({
 // 本地存储排序顺序的 key
 const VAULT_ORDER_KEY = "vault-sort-order"
 
-export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultListProps) {
+export function VaultList({ onNavigateToNotes, onNavigateToAttachments, ftsBleveEnabled }: VaultListProps) {
   const { t } = useTranslation()
   const [vaults, setVaults] = useState<VaultType[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -317,8 +337,18 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
   const [loginCount, setLoginCount] = useState(0)
   const [manualCount, setManualCount] = useState(0)
 
-  const { handleVaultList, handleVaultDelete, handleVaultUpdate } = useVaultHandle()
+  const { handleVaultList, handleVaultDelete, handleVaultUpdate, handleVaultRebuildIndex } = useVaultHandle()
   const { openConfirmDialog } = useConfirmDialog()
+
+  const handleRebuildIndex = async (id: string | number) => {
+    openConfirmDialog(t("ui.vault.rebuildIndexConfirm"), "confirm", async () => {
+      try {
+        await handleVaultRebuildIndex(id)
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : String(error))
+      }
+    })
+  }
   const tokenManagerRef = useRef<TokenManagerHandle>(null)
 
   const handleSetTokenFilter = (type: 0 | 1 | 2) => {
@@ -611,6 +641,8 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments }: VaultL
                       onNavigateToAttachments={onNavigateToAttachments}
                       formatBytes={formatBytes}
                       t={t}
+                      ftsBleveEnabled={ftsBleveEnabled}
+                      onRebuildIndex={handleRebuildIndex}
                     />
                   ))}
                 </div>

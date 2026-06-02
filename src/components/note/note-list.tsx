@@ -1,4 +1,4 @@
-import { NotepadText, Trash2, RefreshCw, Plus, Calendar, Clock, ChevronLeft, ChevronRight, History, Search, X, SortDesc, SortAsc, RotateCcw, Eye, Pencil, Folder as FolderIcon, ChevronDown, FolderSearch, TextCursorInput, Share2, Library, FileText, Paperclip, Image, Music, Video, FileCode } from "lucide-react";
+import { NotepadText, Trash2, RefreshCw, Plus, Calendar, Clock, ChevronLeft, ChevronRight, History, Search, X, SortDesc, SortAsc, RotateCcw, Eye, Pencil, Folder as FolderIcon, ChevronDown, FolderSearch, TextCursorInput, Share2, Library, FileText, Paperclip, Image, Music, Video, FileCode, Upload } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConfirmDialog } from "@/components/context/confirm-dialog-context";
@@ -220,7 +220,7 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
         })
     );
 
-    const { handleFileList, handleDeleteFile, getRawFileUrl, handleFolderFiles, handleRenameFile } = useFileHandle();
+    const { handleFileList, handleDeleteFile, getRawFileUrl, handleFolderFiles, handleRenameFile, handleFileUpload } = useFileHandle();
 
     // 处理笔记与附件拖拽至子目录或面包屑导航（笔记库根目录/上级目录）的放置逻辑
     // Handle drop logic of dragging notes and attachments to subfolders or breadcrumb navigation (vault root/parent folders)
@@ -292,6 +292,31 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
     });
 
     const [fileLoading, setFileLoading] = useState(false);
+
+    // 附件上传状态与引用 / Attachment upload states and ref
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // 处理文件选择并执行附件上传 / Handle file selection and perform attachment upload
+    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (!selectedFile) return;
+
+        setUploading(true);
+        // 如果 currentPath 存在，组装当前文件夹相对路径；否则直接用文件名
+        // Assemble relative path of current folder if currentPath exists; otherwise use filename directly
+        const targetPath = currentPath ? `${currentPath}/${selectedFile.name}` : selectedFile.name;
+
+        handleFileUpload(vault, targetPath, selectedFile, (data) => {
+            setUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ""; // 重置文件输入框 / Reset file input
+            }
+            if (data) {
+                fetchNotes(); // 刷新混合列表 / Refresh hybrid list
+            }
+        });
+    };
 
     // 附件预览状态 / Attachment preview states
     const [previewFile, setPreviewFile] = useState<FileDTO | null>(null);
@@ -845,7 +870,7 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                         <X className="h-4 w-4" />
                                     </button>
                                 )}
-                                <DropdownMenu>
+                                <DropdownMenu modal={false}>
                                     <DropdownMenuTrigger asChild>
                                         <button className="flex items-center gap-1 px-1.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-lg transition-colors">
                                             {searchMode === "path" && <FolderSearch className="h-3.5 w-3.5" />}
@@ -914,10 +939,29 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                         </Button>
                         {!isRecycle && (
-                            <Button onClick={onCreateNote} className="rounded-xl shrink-0">
-                                <Plus className="h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">{t("ui.note.newNote")}</span>
-                            </Button>
+                            <>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={onFileChange}
+                                    style={{ display: "none" }}
+                                />
+                                <Button
+                                    variant="outline"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploading}
+                                    className="rounded-xl shrink-0"
+                                >
+                                    <Upload className={`h-4 w-4 sm:mr-2 ${uploading ? "animate-bounce" : ""}`} />
+                                    <span className="hidden sm:inline">
+                                        {uploading ? t("ui.file.uploading", "上传中...") : t("ui.file.upload", "上传附件")}
+                                    </span>
+                                </Button>
+                                <Button onClick={onCreateNote} className="rounded-xl shrink-0">
+                                    <Plus className="h-4 w-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">{t("ui.note.newNote")}</span>
+                                </Button>
+                            </>
                         )}
                     </div>
 

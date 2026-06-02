@@ -65,9 +65,30 @@ export function useVaultHandle() {
     }
   }, [token])
 
+  const handleVaultRebuildIndex = useCallback(async (id: string | number) => {
+    const data = {
+      id: typeof id === "string" ? parseInt(id) : id,
+    }
+    const response = await fetch(addCacheBuster(env.API_URL + "/api/vault/rebuild-index"), {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers: buildApiHeaders({ token }),
+    })
+    if (!response.ok) {
+      throw new Error("Network response was not ok")
+    }
+    const res = await response.json()
+    if (res.code < 100 && res.code > 0) {
+      toast.success(res.message)
+    } else {
+      toast.error(res.message + ": " + res.details)
+    }
+  }, [token])
+
   return useMemo(() => ({
     handleVaultList,
     handleVaultDelete,
     handleVaultUpdate,
-  }), [handleVaultList, handleVaultDelete, handleVaultUpdate])
+    handleVaultRebuildIndex,
+  }), [handleVaultList, handleVaultDelete, handleVaultUpdate, handleVaultRebuildIndex])
 }
