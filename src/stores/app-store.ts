@@ -106,6 +106,7 @@ export const useAppStore = create<AppState>()(
         trashType: state.trashType
       }),
       // 迁移逻辑：处理模块 ID 重命名及默认值迁移
+      // Migration logic: handles module ID renaming and default value migrations
       onRehydrateStorage: () => (state) => {
         if (!state) return;
 
@@ -121,6 +122,12 @@ export const useAppStore = create<AppState>()(
           state.currentModule = 'config';
         } else if (oldModule === 'settings-browser') {
           state.currentModule = 'settings';
+        }
+
+        // 3. 将旧的“附件管理”模块重定向至“笔记管理”模块
+        // 3. Redirect old 'files' module to 'notes' module
+        if (oldModule === 'files') {
+          state.currentModule = 'notes';
         }
       },
     }

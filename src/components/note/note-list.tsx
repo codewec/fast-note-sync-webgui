@@ -1,10 +1,10 @@
-import { NotepadText, Trash2, RefreshCw, Plus, Calendar, Clock, ChevronLeft, ChevronRight, History, Search, X, SortDesc, SortAsc, RotateCcw, Eye, Pencil, Folder as FolderIcon, ChevronDown, FolderSearch, TextCursorInput, Share2, Library } from "lucide-react";
+import { NotepadText, Trash2, RefreshCw, Plus, Calendar, Clock, ChevronLeft, ChevronRight, History, Search, X, SortDesc, SortAsc, RotateCcw, Eye, Pencil, Folder as FolderIcon, ChevronDown, FolderSearch, TextCursorInput, Share2, Library, FileText, Paperclip, Image, Music, Video, FileCode } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConfirmDialog } from "@/components/context/confirm-dialog-context";
 import { useNoteHandle } from "@/components/api-handle/note-handle";
 import { useShareHandle } from "@/components/api-handle/share-handle";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useAppStore } from "@/stores/app-store";
@@ -18,13 +18,16 @@ import { format } from "date-fns";
 import { ShareModal } from "@/components/share/share-modal";
 import { DndContext, useDraggable, useDroppable, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { FilePreview } from "@/components/file/file-preview";
+import { useFileHandle } from "@/components/api-handle/file-handle";
+import { File as FileDTO, FileListResponse } from "@/lib/types/file";
 
 
 type SearchMode = "path" | "content";
 type SortBy = "mtime" | "ctime" | "path";
 type SortOrder = "desc" | "asc";
 export type ShareFilterType = 'active' | null;
-export type ViewModeType = 'flat' | 'folder';
+export type ViewModeType = 'flat' | 'folder' | 'flat-file';
 
 interface NoteListProps {
     vault: string;
@@ -67,6 +70,46 @@ function DraggableNoteCard({ note, children }: DraggableNoteCardProps) {
         data: {
             type: "note",
             note
+        }
+    });
+
+    const style = {
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+        opacity: isDragging ? 0.4 : undefined,
+        zIndex: isDragging ? 9999 : undefined,
+    };
+
+    return (
+        <div 
+            ref={setNodeRef} 
+            style={style} 
+            {...attributes}
+            {...listeners}
+            className={cn(
+                "w-full cursor-grab active:cursor-grabbing",
+                isDragging && "pointer-events-none"
+            )}
+        >
+            {children}
+        </div>
+    );
+}
+
+/**
+ * 可拖拽的附件卡片包装组件 - 支持直接点击拖拽整张卡片
+ * Draggable file card wrapper component - supports dragging the entire card directly
+ */
+interface DraggableFileCardProps {
+    file: FileDTO;
+    children: React.ReactNode;
+}
+
+function DraggableFileCard({ file, children }: DraggableFileCardProps) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: `file-${file.pathHash}`,
+        data: {
+            type: "file",
+            file
         }
     });
 
@@ -177,8 +220,10 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
         })
     );
 
-    // 处理笔记拖拽至子目录或面包屑导航（笔记库根目录/上级目录）的放置逻辑
-    // Handle drop logic of dragging notes to subfolders or breadcrumb navigation (vault root/parent folders)
+    const { handleFileList, handleDeleteFile, getRawFileUrl, handleFolderFiles, handleRenameFile } = useFileHandle();
+
+    // 处理笔记与附件拖拽至子目录或面包屑导航（笔记库根目录/上级目录）的放置逻辑
+    // Handle drop logic of dragging notes and attachments to subfolders or breadcrumb navigation (vault root/parent folders)
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         if (!over) return;
@@ -186,22 +231,20 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
         const activeData = active.data.current;
         const overData = over.data.current;
 
+        // 获取目标目录相对路径 / Get target directory relative path
+        let targetPath: string | null = null;
+        if (overData?.type === "folder") {
+            const targetFolder = overData.folder as Folder;
+            targetPath = targetFolder.path;
+        } else if (overData?.type === "breadcrumb-folder") {
+            targetPath = overData.path; // targetPath is "" for vault root
+        }
+
+        if (targetPath === null) return;
+
         if (activeData?.type === "note") {
             const dragNote = activeData.note as Note;
             const filename = dragNote.path.split("/").pop() || "";
-            let targetPath: string | null = null;
-
-            if (overData?.type === "folder") {
-                const targetFolder = overData.folder as Folder;
-                targetPath = targetFolder.path;
-            } else if (overData?.type === "breadcrumb-folder") {
-                targetPath = overData.path; // targetPath is "" for vault root
-            }
-
-            if (targetPath === null) return;
-
-            // 如果 targetPath 是空字符串，表示移动到笔记库根目录；否则移动到对应相对路径子目录
-            // If targetPath is an empty string, it means moving to the vault root; otherwise, moving to the subfolder
             const newFullPath = targetPath === "" ? filename : targetPath + "/" + filename;
 
             if (newFullPath === dragNote.path) return;
@@ -214,6 +257,21 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
             }, () => {
                 fetchNotes();
             });
+        } else if (activeData?.type === "file") {
+            const dragFile = activeData.file as FileDTO;
+            const filename = dragFile.path.split("/").pop() || "";
+            const newFullPath = targetPath === "" ? filename : targetPath + "/" + filename;
+
+            if (newFullPath === dragFile.path) return;
+
+            handleRenameFile({
+                vault,
+                oldPath: dragFile.path,
+                path: newFullPath,
+                oldPathHash: dragFile.pathHash
+            }, () => {
+                fetchNotes();
+            });
         }
     };
 
@@ -222,6 +280,21 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
     const [totalRows, setTotalRows] = useState(0);
     const [debouncedKeyword, setDebouncedKeyword] = useState(searchKeyword);
     const [searchMode, setSearchMode] = useState<SearchMode>("path");
+
+    // 附件管理的状态声明 / Attachment management states
+    const [files, setFiles] = useState<FileDTO[]>([]);
+    const [filesTotalRows, setFilesTotalRows] = useState(0);
+    const [filePage, setFilePage] = useState(1);
+    const [filePageSize, setFilePageSize] = useState(() => {
+        const saved = localStorage.getItem("filePageSize");
+        return saved ? parseInt(saved, 10) : 10;
+    });
+
+    const [fileLoading, setFileLoading] = useState(false);
+
+    // 附件预览状态 / Attachment preview states
+    const [previewFile, setPreviewFile] = useState<FileDTO | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string>("");
 
     const [sortBy, setSortBy] = useState<SortBy>("mtime");
     const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -273,14 +346,19 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
 
 
 
-    const fetchNotes = (currentPage: number = page, currentPageSize: number = pageSize, keyword: string = debouncedKeyword) => {
+    const fetchNotes = (
+        currentPage: number = page,
+        currentPageSize: number = pageSize,
+        currentFilePage: number = filePage,
+        currentFilePageSize: number = filePageSize,
+        keyword: string = debouncedKeyword
+    ) => {
         const requestId = ++noteRequestIdRef.current;
-
-
 
         setLoading(true);
 
         // 分享筛选：全库平铺查询（修复子文件夹漏筛）
+        // Share filter: global flat search (fixes missing subfolder shares)
         if (shareFilter === 'active' && !isRecycle) {
             setFolders([]);
             if (activeSharePaths.size === 0) {
@@ -299,28 +377,49 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
             return;
         }
 
+        // 附件平铺浏览模式
+        // Flat file view mode
+        if (viewMode === "flat-file" && !isRecycle) {
+            setFileLoading(true);
+            handleFileList(vault, currentFilePage, currentFilePageSize, isRecycle, keyword, sortBy, sortOrder, (data) => {
+                if (requestId !== noteRequestIdRef.current) return;
+                setFiles(data?.list || []);
+                setFilesTotalRows(data?.pager?.totalRows || 0);
+                setFileLoading(false);
+                setLoading(false);
+            });
+            return;
+        }
+
         if (viewMode === "folder" && !isRecycle) {
-            // 并行发起目录列表和目录笔记两个独立请求，减少首屏等待时间
-            // Issue both folder list and folder notes requests in parallel to reduce initial load time
+            // 并行发起目录列表、目录笔记和目录附件三个独立请求，拉取全量数据进行前端合并
+            // Issue folder list, folder notes, and folder files requests in parallel, fetch all to merge in frontend
+            setFileLoading(true);
             Promise.all([
                 new Promise<Folder[] | null>(resolve => handleFolderList(vault, currentPath, currentPathHash, resolve)),
                 new Promise<{ list: Note[]; pager: { page: number; pageSize: number; totalRows: number } } | null>(resolve =>
-                    handleFolderNotes(vault, currentPath, currentPathHash, currentPage, currentPageSize, sortBy, sortOrder, resolve)
+                    handleFolderNotes(vault, currentPath, currentPathHash, 1, 99999, sortBy, sortOrder, resolve)
                 ),
-            ]).then(([folderData, noteData]) => {
+                new Promise<FileListResponse | null>(resolve =>
+                    handleFolderFiles(vault, currentPath, currentPathHash, 1, 99999, sortBy, sortOrder, resolve)
+                )
+            ]).then(([folderData, noteData, fileData]) => {
                 if (requestId !== noteRequestIdRef.current) return;
                 setFolders(folderData || []);
-                setNotes(noteData?.list || []);
-                setTotalRows(noteData?.pager?.totalRows || 0);
+                const notesList = noteData?.list || [];
+                const filesList = fileData?.list || [];
+                setNotes(notesList);
+                setFiles(filesList);
+                setTotalRows(notesList.length + filesList.length);
+                setFilesTotalRows(filesList.length);
                 setLoading(false);
+                setFileLoading(false);
             });
         } else {
             handleNoteList(vault, currentPage, currentPageSize, keyword, isRecycle, searchMode, false, sortBy, sortOrder, (data) => {
                 if (requestId !== noteRequestIdRef.current) return;
 
                 let filteredList = data?.list || [];
-
-
 
                 setNotes(filteredList);
                 setTotalRows(data?.pager?.totalRows || 0);
@@ -330,21 +429,28 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
     };
 
     useEffect(() => {
-        fetchNotes(page, pageSize, debouncedKeyword);
+        fetchNotes(page, pageSize, filePage, filePageSize, debouncedKeyword);
         setSelectedPaths(new Set()); // 清空选中
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [vault, page, pageSize, debouncedKeyword, isRecycle, searchMode, sortBy, sortOrder, viewMode, currentPath, shareFilter, shareFilterActiveDep]);
+    }, [vault, page, pageSize, filePage, filePageSize, debouncedKeyword, isRecycle, searchMode, sortBy, sortOrder, viewMode, currentPath, shareFilter, shareFilterActiveDep]);
 
-    // 当搜索内容、目录路径或浏览模式变化时，重置页码到第1页
     useEffect(() => {
         if (debouncedKeyword) {
-            setViewMode("flat");
+            setViewMode(viewMode === "flat-file" ? "flat-file" : "flat");
         }
+        setPage(1);
+        setFilePage(1);
     }, [debouncedKeyword, currentPath, viewMode, setPage]);
 
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= Math.ceil(totalRows / pageSize)) {
             setPage(newPage);
+        }
+    };
+
+    const handleFilePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= Math.ceil(filesTotalRows / filePageSize)) {
+            setFilePage(newPage);
         }
     };
 
@@ -420,6 +526,117 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                 />
             </div>
         );
+    };
+
+    /**
+     * 格式化文件大小 / Format file size
+     */
+    const formatFileSize = (bytes: number): string => {
+        if (bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+    };
+
+    /**
+     * 重命名附件 / Rename attachment
+     */
+    const onRenameFile = (e: React.MouseEvent, file: FileDTO) => {
+        e.stopPropagation();
+        const fullFileName = file.path.split("/").pop() || "";
+        const lastDotIndex = fullFileName.lastIndexOf(".");
+        const extension = lastDotIndex !== -1 ? fullFileName.substring(lastDotIndex) : "";
+        const baseName = lastDotIndex !== -1 ? fullFileName.substring(0, lastDotIndex) : fullFileName;
+        let newName = baseName;
+
+        openConfirmDialog(
+            t("ui.file.renameFile"),
+            "confirm",
+            () => {
+                if (!newName || newName === baseName) return;
+
+                const finalName = newName.endsWith(extension) ? newName : newName + extension;
+
+                const oldDir = file.path.includes("/")
+                    ? file.path.substring(0, file.path.lastIndexOf("/") + 1)
+                    : "";
+
+                handleRenameFile({
+                    vault,
+                    oldPath: file.path,
+                    path: oldDir + finalName,
+                    oldPathHash: file.pathHash
+                }, () => {
+                    fetchNotes();
+                });
+            },
+            <div className="pt-2">
+                <Input
+                    autoFocus
+                    defaultValue={baseName}
+                    placeholder={t("ui.file.renameFilePlaceholder")}
+                    onChange={(e) => {
+                        newName = e.target.value;
+                    }}
+                />
+            </div>
+        );
+    };
+
+    /**
+     * 删除附件 / Delete attachment
+     */
+    const onDeleteFile = (e: React.MouseEvent, file: FileDTO) => {
+        e.stopPropagation();
+        openConfirmDialog(t("ui.file.deleteFileConfirm", { title: file.path }), "confirm", () => {
+            handleDeleteFile(vault, file.path, file.pathHash, () => {
+                fetchNotes();
+            });
+        });
+    };
+
+    /**
+     * 处理附件点击 (预览或下载) / Handle attachment click (preview or download)
+     */
+    const handleFileClick = (file: FileDTO) => {
+        let url = getRawFileUrl(vault, file.path, file.pathHash?.toString());
+        if (isRecycle) {
+            url += (url.includes("?") ? "&" : "?") + "isRecycle=1";
+        }
+        setPreviewFile(file);
+        setPreviewUrl(url);
+    };
+
+    /**
+     * 根据文件后缀获取对应的图标 / Get icon by file extension
+     */
+    const getFileIcon = (path: string) => {
+        const ext = path.split('.').pop()?.toLowerCase() || '';
+
+        // 图片类型 / Image types
+        if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp'].includes(ext)) {
+            return <Image className="h-5 w-5" />;
+        }
+        // PDF 类型 / PDF types
+        if (ext === 'pdf') {
+            return <FileText className="h-5 w-5" />;
+        }
+        // 音频类型 / Audio types
+        if (['mp3', 'wav', 'flac', 'ogg', 'm4a'].includes(ext)) {
+            return <Music className="h-5 w-5" />;
+        }
+        // 视频类型 / Video types
+        if (['mp4', 'webm', 'mkv', 'avi', 'mov'].includes(ext)) {
+            return <Video className="h-5 w-5" />;
+        }
+        // 脚本/代码类型 / Script and Code types
+        if (['js', 'ts', 'jsx', 'tsx', 'py', 'sh', 'bat', 'go', 'css', 'html', 'json', 'c', 'cpp', 'rs', 'php'].includes(ext)) {
+            return <FileCode className="h-5 w-5" />;
+        }
+
+        // 默认类型 / Default types
+        return <Paperclip className="h-5 w-5" />;
     };
 
     const toggleSelectAll = () => {
@@ -501,7 +718,57 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
         });
     };
 
-    const totalPages = Math.ceil(totalRows / pageSize);
+    // 合并并排序的混合列表项
+    // Merged and sorted list of notes and attachments
+    const mergedList = useMemo(() => {
+        if (viewMode !== "folder" || isRecycle) return [];
+
+        const noteItems = notes.map(n => ({
+            type: "note" as const,
+            id: `note-${n.pathHash}`,
+            pathHash: n.pathHash,
+            mtime: n.mtime,
+            ctime: n.ctime,
+            path: n.path,
+            data: n
+        }));
+        const fileItems = files.map(f => ({
+            type: "file" as const,
+            id: `file-${f.pathHash}`,
+            pathHash: f.pathHash,
+            mtime: f.mtime,
+            ctime: f.ctime,
+            path: f.path,
+            data: f
+        }));
+
+        const combined = [...noteItems, ...fileItems];
+
+        // 排序逻辑 / Sorting logic
+        combined.sort((a, b) => {
+            let valA: any = a[sortBy];
+            let valB: any = b[sortBy];
+
+            if (sortBy === "path") {
+                valA = a.path.toLowerCase();
+                valB = b.path.toLowerCase();
+            }
+
+            if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+            if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+            return 0;
+        });
+
+        return combined;
+    }, [notes, files, viewMode, isRecycle, sortBy, sortOrder]);
+
+    // 对融合后的列表做前端切片分页 / Frontend pagination for the merged list
+    const paginatedItems = useMemo(() => {
+        if (viewMode !== "folder" || isRecycle) return [];
+        return mergedList.slice((page - 1) * pageSize, page * pageSize);
+    }, [mergedList, viewMode, isRecycle, page, pageSize]);
+
+
 
     return (
         <div className="w-full flex flex-col space-y-4">
@@ -635,11 +902,23 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                     className={`px-4 h-full text-xs font-medium transition-colors border-l border-border ${viewMode === 'flat' ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                                     onClick={() => setViewMode("flat")}
                                 >
-                                    {t("ui.note.viewFlat")}
+                                    {t("ui.note.viewFlatNotes")}
+                                </button>
+                                <button
+                                    className={`px-4 h-full text-xs font-medium transition-colors border-l border-border ${viewMode === 'flat-file' ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                                    onClick={() => setViewMode("flat-file")}
+                                >
+                                    {t("ui.note.viewFlatFiles")}
                                 </button>
                             </div>
                             <span className="text-sm font-medium text-muted-foreground mr-2">
-                                {totalRows} {t("ui.note.note")}
+                                {viewMode === 'flat-file' ? (
+                                    `${filesTotalRows} ${t("ui.file.file")}`
+                                ) : viewMode === 'folder' ? (
+                                    `${totalRows} ${t("ui.note.note")} / ${filesTotalRows} ${t("ui.file.file")}`
+                                ) : (
+                                    `${totalRows} ${t("ui.note.note")}`
+                                )}
                             </span>
                         </div>
                     )}
@@ -823,6 +1102,7 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                     setCurrentPath("");
                                     setCurrentPathHash("");
                                     setPage(1);
+                                    setFilePage(1);
                                 }}
                             >
                                 <Library className="h-4 w-4 shrink-0 mr-1" />
@@ -849,6 +1129,7 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                                 setCurrentPath(path);
                                                 setCurrentPathHash(pathHashMap[path] || "");
                                                 setPage(1);
+                                                setFilePage(1);
                                             }}
                                         >
                                             {part}
@@ -860,306 +1141,389 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                     </div>
                 )}
 
-                {/* 笔记及目录列表 */}
-                {loading ? (
+                {/* 统一的数据加载占位符 */}
+                {/* Unified loading skeleton */}
+                {(loading || fileLoading) ? (
                     <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
                         <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
                         {batchRestoreProgress
                             ? `${batchRestoreProgress.current} / ${batchRestoreProgress.total}`
                             : t("ui.common.loading")}
                     </div>
-                ) : (!Array.isArray(notes) || notes.length === 0) && (!Array.isArray(folders) || folders.length === 0 || viewMode === "flat") ? (
-                    <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
-                        {t("ui.note.noNotes")}
-                    </div>
                 ) : (
-                    <div 
-                        // 为下方内容容器显式添加 relative z-10，配合上方 z-30 面包屑进行完美物理隔离
-                        // Explicitly add relative z-10 for the content list container, isolating it from the z-30 breadcrumbs
-                        className="-mx-2 px-2 relative z-10"
-                    >
-                        <div className="grid grid-cols-1 gap-3 py-1">
-                            {/* 目录列表 */}
-                            {viewMode === "folder" && !isRecycle && folders.map((folder) => (
-                                <DroppableFolderCard key={`folder-droppable-${folder.pathHash}`} folder={folder}>
-                                    <article
-                                        className="rounded-xl border border-border bg-card p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30"
-                                        onClick={() => {
-                                            setPathHashMap({ ...pathHashMap, [folder.path]: folder.pathHash });
-                                            setCurrentPath(folder.path);
-                                            setCurrentPathHash(folder.pathHash);
-                                            setPage(1);
-                                        }}
-                                    >
-                                        <div className="flex items-center justify-between gap-4">
-                                            <div className="flex items-start gap-3 min-w-0 flex-1">
-                                                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 shrink-0">
-                                                    <FolderIcon className="h-5 w-5 fill-current opacity-70" />
-                                                </span>
-                                                <div className="min-w-0 flex-1">
-                                                    <h3 className="font-semibold text-card-foreground truncate">
-                                                        {folder.path.split("/").pop()}
-                                                    </h3>
-                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                                                        <Tooltip content={t("ui.common.createdAt")} side="top" delay={300}>
-                                                            <span className="hidden sm:flex items-center gap-1">
-                                                                <Calendar className="h-3.5 w-3.5" />
-                                                                {format(new Date(folder.ctime), "yyyy-MM-dd HH:mm")}
-                                                            </span>
-                                                        </Tooltip>
-                                                        <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
-                                                            <span className="flex items-center gap-1">
-                                                                <Clock className="h-3.5 w-3.5" />
-                                                                {format(new Date(folder.mtime), "yyyy-MM-dd HH:mm")}
-                                                            </span>
-                                                        </Tooltip>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="shrink-0">
-                                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                            </div>
-                                        </div>
-                                    </article>
-                                </DroppableFolderCard>
-                            ))}
-
-                            {/* 笔记列表 */}
-                            {/* Note list */}
-                            {Array.isArray(notes) && notes.map((note) => {
-                                const noteIsShared = !isRecycle && activeSharePaths.has(note.path);
-                                const cardContent = (
-                                    <article
-                                        key={`note-${note.pathHash}`}
-                                        className="rounded-xl border border-border bg-card p-2.5 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30 w-full"
-                                        onClick={() => onSelectNote(note, true)}
-                                    >
-                                        <div className="flex items-center justify-between gap-2 sm:gap-4">
-                                            {/* 左侧：图标和内容 */}
-                                            {/* Left: Icon and content */}
-                                            <div className="flex items-start gap-3 min-w-0 flex-1">
-                                                {isRecycle && (
-                                                    <div
-                                                        className="flex items-center self-center"
-                                                        onClick={(e) => toggleSelect(e, note.pathHash)}
-                                                    >
-                                                        <Checkbox
-                                                            checked={selectedPaths.has(note.pathHash)}
-                                                            className="rounded-md"
-                                                        />
-                                                    </div>
-                                                )}
-                                                <span className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
-                                                    <NotepadText className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                </span>
-                                                <div className="min-w-0 flex-1">
-                                                    <h3 className="font-semibold text-card-foreground truncate flex items-center gap-1">
-                                                        <span className="truncate">{(viewMode === "folder" && !isRecycle && !shareFilter ? note.path.split("/").pop() : note.path)?.replace(/\.md$/, "")}</span>
-                                                        {noteIsShared && (
-                                                            <Share2 className="h-3 w-3 text-green-500 shrink-0" />
-                                                        )}
-                                                    </h3>
-                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                                                        <Tooltip content={t("ui.common.createdAt")} side="top" delay={300}>
-                                                            <span className="hidden sm:flex items-center gap-1">
-                                                                <Calendar className="h-3.5 w-3.5" />
-                                                                {format(new Date(note.ctime), "yyyy-MM-dd HH:mm")}
-                                                            </span>
-                                                        </Tooltip>
-                                                        <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
-                                                            <span className="flex items-center gap-1">
-                                                                <Clock className="h-3.5 w-3.5" />
-                                                                <span className="sm:hidden">{format(new Date(note.mtime), "MM-dd HH:mm")}</span>
-                                                                <span className="hidden sm:inline">{format(new Date(note.mtime), "yyyy-MM-dd HH:mm")}</span>
-                                                            </span>
-                                                        </Tooltip>
-                                                        {note.version > 0 && (
-                                                            <Tooltip content={t("ui.history.title")} side="top" delay={300}>
-                                                                <span className="flex items-center gap-1">
-                                                                    <History className="h-3.5 w-3.5" />
-                                                                    v{note.version}
-                                                                </span>
-                                                            </Tooltip>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* 右侧：操作按钮 */}
-                                            {/* Right: Actions */}
-                                            <div className="flex items-center gap-1 shrink-0">
-                                                <Tooltip content={t("ui.note.viewNote")} side="top" delay={200}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-primary"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onSelectNote(note, true);
-                                                        }}
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
-                                                </Tooltip>
-                                                <Tooltip content={t("ui.note.editNote")} side="top" delay={200}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-600"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onSelectNote(note, false);
-                                                        }}
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                </Tooltip>
-                                                <Tooltip content={t("ui.history.title")} side="top" delay={200}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-purple-600"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onViewHistory(note);
-                                                        }}
-                                                    >
-                                                        <History className="h-4 w-4" />
-                                                    </Button>
-                                                </Tooltip>
-                                                {!isRecycle && (
-                                                    <Tooltip content={t("ui.common.rename")} side="top" delay={200}>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-500"
-                                                            onClick={(e) => onRename(e, note)}
-                                                        >
-                                                            <TextCursorInput className="h-4 w-4" />
-                                                        </Button>
-                                                    </Tooltip>
-                                                )}
-                                                {!isRecycle && (
-                                                    <Tooltip content={t("ui.share.title")} side="top" delay={200}>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className={`h-7 w-7 sm:h-8 sm:w-8 rounded-xl ${noteIsShared ? "text-green-600 hover:text-green-700 bg-green-500/10" : "text-muted-foreground hover:text-primary"}`}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setSelectedShareNote(note);
-                                                                setShareModalOpen(true);
+                    <div className="-mx-2 px-2 relative z-10 space-y-6">
+                        {/* 1. 目录浏览视图 */}
+                        {/* 1. Folder view mode */}
+                        {viewMode === "folder" && !isRecycle && (
+                            <>
+                                {(!Array.isArray(folders) || folders.length === 0) &&
+                                 (!Array.isArray(notes) || notes.length === 0) &&
+                                 (!Array.isArray(files) || files.length === 0) ? (
+                                    <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
+                                        {t("ui.common.noData")}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-3">
+                                        {/* 子目录块 */}
+                                        {Array.isArray(folders) && folders.length > 0 && (
+                                            <div className="grid grid-cols-1 gap-3">
+                                                {folders.map((folder) => (
+                                                    <DroppableFolderCard key={`folder-droppable-${folder.pathHash}`} folder={folder}>
+                                                        <article
+                                                            className="rounded-xl border border-border bg-card p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30"
+                                                            onClick={() => {
+                                                                setPathHashMap({ ...pathHashMap, [folder.path]: folder.pathHash });
+                                                                setCurrentPath(folder.path);
+                                                                setCurrentPathHash(folder.pathHash);
+                                                                setPage(1);
+                                                                setFilePage(1);
                                                             }}
                                                         >
-                                                            <Share2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </Tooltip>
-                                                )}
-                                                {!isRecycle && (
-                                                    <Tooltip content={t("ui.common.delete")} side="top" delay={200}>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-destructive"
-                                                            onClick={(e) => onDelete(e, note)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </Tooltip>
-                                                )}
-                                                {isRecycle && (
-                                                    <>
-                                                        <Tooltip content={t("ui.common.restore")} side="top" delay={200}>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-green-600"
-                                                                onClick={(e) => onRestore(e, note)}
-                                                            >
-                                                                <RotateCcw className="h-4 w-4" />
-                                                            </Button>
-                                                        </Tooltip>
-                                                        <Tooltip content={t("ui.common.permanentDelete")} side="top" delay={200}>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive"
-                                                                onClick={(e) => onPermanentDelete(e, note)}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </Tooltip>
-                                                    </>
+                                                            <div className="flex items-center justify-between gap-4">
+                                                                <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 shrink-0">
+                                                                        <FolderIcon className="h-5 w-5 fill-current opacity-70" />
+                                                                    </span>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <h3 className="font-semibold text-card-foreground truncate">
+                                                                            {folder.path.split("/").pop()}
+                                                                        </h3>
+                                                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                                                <Tooltip content={t("ui.common.createdAt")} side="top" delay={300}>
+                                                                                <span className="hidden sm:flex items-center gap-1">
+                                                                                    <Calendar className="h-3.5 w-3.5" />
+                                                                                    {format(new Date(folder.ctime), "yyyy-MM-dd HH:mm")}
+                                                                                </span>
+                                                                            </Tooltip>
+                                                                            <Tooltip content={t("ui.common.updatedAt")} side="top" delay={300}>
+                                                                                <span className="flex items-center gap-1">
+                                                                                    <Clock className="h-3.5 w-3.5" />
+                                                                                    {format(new Date(folder.mtime), "yyyy-MM-dd HH:mm")}
+                                                                                </span>
+                                                                            </Tooltip>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="shrink-0">
+                                                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                                                </div>
+                                                            </div>
+                                                        </article>
+                                                    </DroppableFolderCard>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* 融合后的笔记与附件列表区块 */}
+                                        {Array.isArray(paginatedItems) && paginatedItems.length > 0 && (
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {paginatedItems.map((item) => {
+                                                        if (item.type === "note") {
+                                                            const note = item.data;
+                                                            const noteIsShared = activeSharePaths.has(note.path);
+                                                            const cardContent = (
+                                                                <article
+                                                                    className="rounded-xl border border-border bg-card p-2.5 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30 w-full"
+                                                                    onClick={() => onSelectNote(note, true)}
+                                                                >
+                                                                    <div className="flex items-center justify-between gap-2 sm:gap-4">
+                                                                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                                            <span className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                                                                                <NotepadText className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                                            </span>
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <h3 className="font-semibold text-card-foreground truncate flex items-center gap-1">
+                                                                                    <span className="truncate">{note.path.split("/").pop()?.replace(/\.md$/, "")}</span>
+                                                                                    {noteIsShared && <Share2 className="h-3 w-3 text-green-500 shrink-0" />}
+                                                                                </h3>
+                                                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                                                                                    <span className="hidden sm:flex items-center gap-1">
+                                                                                        <Calendar className="h-3.5 w-3.5" />
+                                                                                        {format(new Date(note.ctime), "yyyy-MM-dd HH:mm")}
+                                                                                    </span>
+                                                                                    <span className="flex items-center gap-1">
+                                                                                        <Clock className="h-3.5 w-3.5" />
+                                                                                        <span className="hidden sm:inline">{format(new Date(note.mtime), "yyyy-MM-dd HH:mm")}</span>
+                                                                                        <span className="sm:hidden">{format(new Date(note.mtime), "MM-dd HH:mm")}</span>
+                                                                                    </span>
+                                                                                    {note.version > 0 && (
+                                                                                        <span className="flex items-center gap-1">
+                                                                                            <History className="h-3.5 w-3.5" />
+                                                                                            v{note.version}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-primary" onClick={() => onSelectNote(note, true)}><Eye className="h-4 w-4" /></Button>
+                                                                            <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-600" onClick={() => onSelectNote(note, false)}><Pencil className="h-4 w-4" /></Button>
+                                                                            <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-purple-600" onClick={() => onViewHistory(note)}><History className="h-4 w-4" /></Button>
+                                                                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-500" onClick={(e) => onRename(e, note)}><TextCursorInput className="h-4 w-4" /></Button>
+                                                                            <Button variant="ghost" size="icon" className={`h-7 w-7 sm:h-8 sm:w-8 rounded-xl ${noteIsShared ? "text-green-600 hover:text-green-700 bg-green-500/10" : "text-muted-foreground hover:text-primary"}`} onClick={() => { setSelectedShareNote(note); setShareModalOpen(true); }}><Share2 className="h-4 w-4" /></Button>
+                                                                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-destructive" onClick={(e) => onDelete(e, note)}><Trash2 className="h-4 w-4" /></Button>
+                                                                        </div>
+                                                                    </div>
+                                                                </article>
+                                                            );
+                                                            return (
+                                                                <DraggableNoteCard key={`note-draggable-${note.pathHash}`} note={note}>
+                                                                    {cardContent}
+                                                                </DraggableNoteCard>
+                                                            );
+                                                        } else {
+                                                            const file = item.data;
+                                                            const cardContent = (
+                                                                <article
+                                                                    className="rounded-xl border border-border bg-card p-2.5 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30 w-full"
+                                                                    onClick={() => handleFileClick(file)}
+                                                                >
+                                                                    <div className="flex items-center justify-between gap-2 sm:gap-4">
+                                                                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                                            <span className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                                                                                {getFileIcon(file.path)}
+                                                                            </span>
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <h3 className="font-semibold text-card-foreground truncate flex items-center gap-1.5">
+                                                                                    <span className="truncate">{file.path.split("/").pop()}</span>
+                                                                                    <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                                                </h3>
+                                                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                                                                                    <span>{formatFileSize(file.size)}</span>
+                                                                                    <span className="hidden sm:flex items-center gap-1">
+                                                                                        <Calendar className="h-3.5 w-3.5" />
+                                                                                        {format(new Date(file.ctime), "yyyy-MM-dd HH:mm")}
+                                                                                    </span>
+                                                                                    <span className="flex items-center gap-1">
+                                                                                        <Clock className="h-3.5 w-3.5" />
+                                                                                        {format(new Date(file.mtime), "yyyy-MM-dd HH:mm")}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-500" onClick={(e) => onRenameFile(e, file)}><TextCursorInput className="h-4 w-4" /></Button>
+                                                                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-destructive" onClick={(e) => onDeleteFile(e, file)}><Trash2 className="h-4 w-4" /></Button>
+                                                                        </div>
+                                                                    </div>
+                                                                </article>
+                                                            );
+                                                            return (
+                                                                <DraggableFileCard key={`file-draggable-${file.pathHash}`} file={file}>
+                                                                    {cardContent}
+                                                                </DraggableFileCard>
+                                                            );
+                                                        }
+                                                    })}
+                                                </div>
+                                                {/* 融合列表统一分页 */}
+                                                {Math.ceil(totalRows / pageSize) > 1 && (
+                                                    <div className="flex justify-end gap-2 pt-2">
+                                                        <Button variant="outline" size="sm" onClick={() => handlePageChange(page - 1)} disabled={page === 1} className="rounded-xl h-8 px-2"><ChevronLeft className="h-4 w-4" /></Button>
+                                                        <span className="text-xs font-medium flex items-center px-1">{page} / {Math.ceil(totalRows / pageSize)}</span>
+                                                        <Button variant="outline" size="sm" onClick={() => handlePageChange(page + 1)} disabled={page === Math.ceil(totalRows / pageSize)} className="rounded-xl h-8 px-2"><ChevronRight className="h-4 w-4" /></Button>
+                                                    </div>
                                                 )}
                                             </div>
-                                        </div>
-                                    </article>
-                                );
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )}
 
-                                return isRecycle ? (
-                                    <React.Fragment key={`note-${note.pathHash}`}>
-                                        {cardContent}
-                                    </React.Fragment>
+                        {/* 2. 笔记平铺浏览视图 */}
+                        {/* 2. Flat Notes view mode */}
+                        {viewMode === "flat" && (
+                            <>
+                                {(!Array.isArray(notes) || notes.length === 0) ? (
+                                    <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
+                                        {t("ui.note.noNotes")}
+                                    </div>
                                 ) : (
-                                    <DraggableNoteCard key={`note-draggable-${note.pathHash}`} note={note}>
-                                        {cardContent}
-                                    </DraggableNoteCard>
-                                );
-                            })}
-                        </div>
+                                    <div className="flex flex-col gap-4">
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {notes.map((note) => {
+                                                const noteIsShared = !isRecycle && activeSharePaths.has(note.path);
+                                                const cardContent = (
+                                                    <article
+                                                        key={`note-${note.pathHash}`}
+                                                        className="rounded-xl border border-border bg-card p-2.5 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30 w-full"
+                                                        onClick={() => onSelectNote(note, true)}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2 sm:gap-4">
+                                                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                                {isRecycle && (
+                                                                    <div className="flex items-center self-center" onClick={(e) => toggleSelect(e, note.pathHash)}>
+                                                                        <Checkbox checked={selectedPaths.has(note.pathHash)} className="rounded-md" />
+                                                                    </div>
+                                                                )}
+                                                                <span className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                                                                    <NotepadText className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                                </span>
+                                                                <div className="min-w-0 flex-1">
+                                                                    <h3 className="font-semibold text-card-foreground truncate flex items-center gap-1">
+                                                                        <span className="truncate">{note.path.replace(/\.md$/, "")}</span>
+                                                                        {noteIsShared && <Share2 className="h-3 w-3 text-green-500 shrink-0" />}
+                                                                    </h3>
+                                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                                                                        <span className="hidden sm:flex items-center gap-1">
+                                                                            <Calendar className="h-3.5 w-3.5" />
+                                                                            {format(new Date(note.ctime), "yyyy-MM-dd HH:mm")}
+                                                                        </span>
+                                                                        <span className="flex items-center gap-1">
+                                                                            <Clock className="h-3.5 w-3.5" />
+                                                                            <span className="hidden sm:inline">{format(new Date(note.mtime), "yyyy-MM-dd HH:mm")}</span>
+                                                                            <span className="sm:hidden">{format(new Date(note.mtime), "MM-dd HH:mm")}</span>
+                                                                        </span>
+                                                                        {note.version > 0 && (
+                                                                            <span className="flex items-center gap-1">
+                                                                                <History className="h-3.5 w-3.5" />
+                                                                                v{note.version}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); onSelectNote(note, true); }}><Eye className="h-4 w-4" /></Button>
+                                                                <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-600" onClick={(e) => { e.stopPropagation(); onSelectNote(note, false); }}><Pencil className="h-4 w-4" /></Button>
+                                                                <Button variant="ghost" size="icon" className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-purple-600" onClick={(e) => { e.stopPropagation(); onViewHistory(note); }}><History className="h-4 w-4" /></Button>
+                                                                {!isRecycle && <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-500" onClick={(e) => onRename(e, note)}><TextCursorInput className="h-4 w-4" /></Button>}
+                                                                {!isRecycle && <Button variant="ghost" size="icon" className={`h-7 w-7 sm:h-8 sm:w-8 rounded-xl ${noteIsShared ? "text-green-600 hover:text-green-700 bg-green-500/10" : "text-muted-foreground hover:text-primary"}`} onClick={(e) => { e.stopPropagation(); setSelectedShareNote(note); setShareModalOpen(true); }}><Share2 className="h-4 w-4" /></Button>}
+                                                                {!isRecycle && <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-destructive" onClick={(e) => onDelete(e, note)}><Trash2 className="h-4 w-4" /></Button>}
+                                                                {isRecycle && (
+                                                                    <>
+                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-green-600" onClick={(e) => onRestore(e, note)}><RotateCcw className="h-4 w-4" /></Button>
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive" onClick={(e) => onPermanentDelete(e, note)}><Trash2 className="h-4 w-4" /></Button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </article>
+                                                );
+                                                return isRecycle ? (
+                                                    <React.Fragment key={`note-${note.pathHash}`}>
+                                                        {cardContent}
+                                                    </React.Fragment>
+                                                ) : (
+                                                    <DraggableNoteCard key={`note-draggable-${note.pathHash}`} note={note}>
+                                                        {cardContent}
+                                                    </DraggableNoteCard>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* 全局笔记分页 */}
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 pt-2 shrink-0">
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <span>{t("ui.common.of")} {totalRows} {t("ui.note.results")}</span>
+                                                <Select value={pageSize.toString()} onValueChange={(val) => {
+                                                    setPageSize(parseInt(val));
+                                                    setPage(1);
+                                                }}>
+                                                    <SelectTrigger className="h-8 w-25 rounded-xl"><SelectValue placeholder={pageSize.toString()} /></SelectTrigger>
+                                                    <SelectContent className="rounded-xl">
+                                                        {[10, 20, 50, 100].map((size) => (
+                                                            <SelectItem key={size} value={size.toString()} className="rounded-xl">{size} {t("ui.common.perPage")}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="outline" size="sm" onClick={() => handlePageChange(page - 1)} disabled={page === 1 || loading} className="rounded-xl"><ChevronLeft className="h-4 w-4" />{t("ui.common.previous")}</Button>
+                                                <span className="text-sm font-medium px-2">{page} / {Math.ceil(totalRows / pageSize)}</span>
+                                                <Button variant="outline" size="sm" onClick={() => handlePageChange(page + 1)} disabled={page === Math.ceil(totalRows / pageSize) || loading} className="rounded-xl">{t("ui.common.next")}<ChevronRight className="h-4 w-4" /></Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* 3. 附件平铺浏览视图 */}
+                        {/* 3. Flat Attachments view mode */}
+                        {viewMode === "flat-file" && (
+                            <>
+                                {(!Array.isArray(files) || files.length === 0) ? (
+                                    <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
+                                        {t("ui.file.noFiles")}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-4">
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {files.map((file) => (
+                                                <article
+                                                    key={`file-${file.pathHash}`}
+                                                    className="rounded-xl border border-border bg-card p-2.5 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/30 w-full"
+                                                    onClick={() => handleFileClick(file)}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2 sm:gap-4">
+                                                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                            {isRecycle && (
+                                                                <div className="flex items-center self-center" onClick={(e) => e.stopPropagation()}>
+                                                                    <Checkbox checked={selectedPaths.has(file.pathHash)} className="rounded-md" />
+                                                                </div>
+                                                            )}
+                                                            <span className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                                                                {getFileIcon(file.path)}
+                                                            </span>
+                                                            <div className="min-w-0 flex-1">
+                                                                <h3 className="font-semibold text-card-foreground truncate flex items-center gap-1.5">
+                                                                    <span className="truncate">{file.path}</span>
+                                                                    <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                                </h3>
+                                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                                                                    <span>{formatFileSize(file.size)}</span>
+                                                                    <span className="hidden sm:flex items-center gap-1">
+                                                                        <Calendar className="h-3.5 w-3.5" />
+                                                                        {format(new Date(file.ctime), "yyyy-MM-dd HH:mm")}
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Clock className="h-3.5 w-3.5" />
+                                                                        {format(new Date(file.mtime), "yyyy-MM-dd HH:mm")}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            {!isRecycle && <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-blue-500" onClick={(e) => onRenameFile(e, file)}><TextCursorInput className="h-4 w-4" /></Button>}
+                                                            {!isRecycle && <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl text-muted-foreground hover:text-destructive" onClick={(e) => onDeleteFile(e, file)}><Trash2 className="h-4 w-4" /></Button>}
+                                                        </div>
+                                                    </div>
+                                                </article>
+                                            ))}
+                                        </div>
+
+                                        {/* 全局附件分页 */}
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 pt-2 shrink-0">
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <span>{t("ui.common.of")} {filesTotalRows} {t("ui.file.results")}</span>
+                                                <Select value={filePageSize.toString()} onValueChange={(val) => {
+                                                    setFilePageSize(parseInt(val));
+                                                    setFilePage(1);
+                                                }}>
+                                                    <SelectTrigger className="h-8 w-25 rounded-xl"><SelectValue placeholder={filePageSize.toString()} /></SelectTrigger>
+                                                    <SelectContent className="rounded-xl">
+                                                        {[10, 20, 50, 100].map((size) => (
+                                                            <SelectItem key={size} value={size.toString()} className="rounded-xl">{size} {t("ui.common.perPage")}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="outline" size="sm" onClick={() => handleFilePageChange(filePage - 1)} disabled={filePage === 1 || fileLoading} className="rounded-xl"><ChevronLeft className="h-4 w-4" />{t("ui.common.previous")}</Button>
+                                                <span className="text-sm font-medium px-2">{filePage} / {Math.ceil(filesTotalRows / filePageSize)}</span>
+                                                <Button variant="outline" size="sm" onClick={() => handleFilePageChange(filePage + 1)} disabled={filePage === Math.ceil(filesTotalRows / filePageSize) || fileLoading} className="rounded-xl">{t("ui.common.next")}<ChevronRight className="h-4 w-4" /></Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 )}
             </DndContext>
-
-            {/* 分页控制 */}
-            {notes.length > 0 && (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 pt-2 shrink-0">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{t("ui.common.of")} {totalRows} {t("ui.note.results")}</span>
-                        <Select value={pageSize.toString()} onValueChange={(val) => {
-                            const newSize = parseInt(val);
-                            setPageSize(newSize);
-                            setPage(1);
-                        }}>
-                            <SelectTrigger className="h-8 w-25 rounded-xl">
-                                <SelectValue placeholder={pageSize.toString()} />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl">
-                                {[10, 20, 50, 100].map((size) => (
-                                    <SelectItem key={size} value={size.toString()} className="rounded-xl">
-                                        {size} {t("ui.common.perPage")}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePageChange(page - 1)}
-                            disabled={page === 1 || loading}
-                            className="rounded-xl"
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                            {t("ui.common.previous")}
-                        </Button>
-                        <span className="text-sm font-medium px-2">
-                            {page} / {totalPages}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePageChange(page + 1)}
-                            disabled={page === totalPages || loading}
-                            className="rounded-xl"
-                        >
-                            {t("ui.common.next")}
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            )}
 
             {selectedShareNote && (
                 <ShareModal
@@ -1171,6 +1535,20 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                     onShareChange={refreshShareItems}
                 />
             )}
+
+            {/* 附件预览组件 / Attachment preview modal */}
+            {previewFile && (
+                <FilePreview
+                    key={previewUrl}
+                    file={previewFile}
+                    url={previewUrl}
+                    onClose={() => {
+                        setPreviewFile(null);
+                        setPreviewUrl("");
+                    }}
+                />
+            )}
         </div>
     );
 }
+

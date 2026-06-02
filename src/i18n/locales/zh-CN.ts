@@ -276,6 +276,8 @@ export default {
     "ui.note.sortDesc": "降序",
     "ui.note.viewFlat": "平铺浏览",
     "ui.note.viewFolder": "目录浏览",
+    "ui.note.viewFlatNotes": "笔记平铺浏览",
+    "ui.note.viewFlatFiles": "附件平铺浏览",
     "ui.note.editorHr": "分割线",
     "ui.note.exportPdfPlanned": "PDF 导出功能开发中...",
     "ui.note.undo": "撤销",

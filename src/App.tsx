@@ -256,22 +256,6 @@ function App() {
           />
         )
 
-      case "files":
-        if (!vaultsLoaded || !activeVault) {
-          return (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          )
-        }
-        return (
-          <FileManager
-            vault={activeVault}
-            onVaultChange={setActiveVault}
-            onNavigateToVaults={() => setModule("vaults")}
-          />
-        )
-
       case "trash":
         if (!vaultsLoaded || !activeVault) {
           return (
@@ -348,11 +332,13 @@ function App() {
           <VaultList
             onNavigateToNotes={(vaultName) => {
               setActiveVault(vaultName)
+              localStorage.setItem("noteViewMode", "folder")
               setModule("notes")
             }}
             onNavigateToAttachments={(vaultName) => {
               setActiveVault(vaultName)
-              setModule("files")
+              localStorage.setItem("noteViewMode", "flat-file")
+              setModule("notes")
             }}
           />
         )

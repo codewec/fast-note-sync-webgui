@@ -276,6 +276,8 @@ export default {
     "ui.note.sortDesc": "Descending",
     "ui.note.viewFlat": "Flat view",
     "ui.note.viewFolder": "Folder view",
+    "ui.note.viewFlatNotes": "Flat View Notes",
+    "ui.note.viewFlatFiles": "Flat View Attachments",
     "ui.note.editorHr": "Horizontal rule",
     "ui.note.exportPdfPlanned": "PDF export feature in development...",
     "ui.note.undo": "Undo",
