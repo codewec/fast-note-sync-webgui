@@ -238,8 +238,8 @@ export default {
     "ui.vault.createVaultFirst": "請先創建一個筆記庫，然後再進行管理",
     "ui.vault.goToVaultManagement": "前往筆記庫管理",
     "ui.vault.setAsDefault": "設為默認",
-    "ui.vault.rebuildIndex": "重建全文搜尋索引",
-    "ui.vault.rebuildIndexConfirm": "確定要重建該筆記庫的全文搜尋索引嗎？此操作將重新掃描並索引所有筆記。",
+    "ui.vault.rebuildIndex": "重建全文檢索索引",
+    "ui.vault.rebuildIndexConfirm": "確定要重建該筆記庫的全文檢索索引嗎？此操作將重新掃描並索引所有筆記。",
 
     // --- ui.note ---
     "ui.note.note": "筆記",
@@ -250,7 +250,7 @@ export default {
     "ui.note.maximize": "最大化",
     "ui.note.exitMaximize": "退出最大化",
     "ui.note.editNote": "編輯筆記",
-    "ui.note.downloadMarkdown": "下載 Markdown 源文件",
+    "ui.note.downloadMarkdown": "下載 Markdown 原始檔案",
     "ui.note.search": "搜索",
     "ui.note.searchPlaceholder": "搜索筆記...",
     "ui.note.noteTitlePlaceholder": "筆記標題 (例如: note.md)",
@@ -267,6 +267,10 @@ export default {
     "ui.note.deleteFolderConfirm": "確定要刪除目錄 \"{{title}}\" 嗎？此操作不可撤銷！",
     "ui.note.deleteFolderNotEmpty": "該目錄下存在子目錄、筆記或附件，只允許刪除空目錄！",
     "ui.note.deleteFolderChecking": "正在檢測目錄內容，請稍候...",
+    "ui.note.newFolder": "新增目錄",
+    "ui.note.folderNamePlaceholder": "請輸入目錄名稱 (例如: projects)",
+    "ui.note.folderNameRequired": "目錄名稱不能為空",
+    "ui.note.folderAlreadyExists": "目錄 \"{{name}}\" 已存在！",
     "ui.note.permanentDeleteConfirm": "確定要永久刪除筆記 \"{{title}}\" 嗎？此操作無法撤銷！",
     "ui.note.restoreNoteConfirm": "確定要恢復筆記 \"{{title}}\" 嗎？",
     "ui.note.clearRecycleConfirm": "確定要清空筆記回收站嗎？此操作無法撤銷！",
@@ -746,6 +750,12 @@ export default {
     "ui.validation.storage.typeRequired": "請選擇儲存類型",
     "ui.validation.storage.accessUrlPrefixRequired": "存取地址前綴不能為空",
     "ui.validation.vault.nameRequired": "倉庫名稱不能為空",
+    "ui.validation.nameRequired": "名稱不能為空",
+    "ui.validation.nameTooLong": "單一目錄或檔案名稱不能超過 255 個字元",
+    "ui.validation.nameIllegalChars": "名稱中不能包含非法字元 (例如: \\ : * ? \" < > |)",
+    "ui.validation.nameReservedDot": "名稱不能為特殊目錄 '.' 或 '..'",
+    "ui.validation.nameReservedWindows": "名稱 \"{{name}}\" 是系統保留關鍵字，請使用其他名稱",
+    "ui.validation.nameInvalidWrap": "目錄或檔案名稱首尾不能包含空白或點號",
 
     // --- api.handle ---
     "api.git.list.error": "取得 Git 配置列表失敗",

@@ -267,6 +267,10 @@ export default {
     "ui.note.deleteFolderConfirm": "确定要删除目录 \"{{title}}\" 吗？此操作不可撤销！",
     "ui.note.deleteFolderNotEmpty": "该目录下存在子目录、笔记或附件，只允许删除空目录！",
     "ui.note.deleteFolderChecking": "正在检测目录内容，请稍候...",
+    "ui.note.newFolder": "新建目录",
+    "ui.note.folderNamePlaceholder": "请输入目录名称 (例如: projects)",
+    "ui.note.folderNameRequired": "目录名称不能为空",
+    "ui.note.folderAlreadyExists": "目录 \"{{name}}\" 已存在！",
     "ui.note.permanentDeleteConfirm": "确定要永久删除笔记 \"{{title}}\" 吗？此操作无法撤销！",
     "ui.note.restoreNoteConfirm": "确定要恢复笔记 \"{{title}}\" 吗？",
     "ui.note.clearRecycleConfirm": "确定要清空笔记回收站吗？此操作无法撤销！",
@@ -746,6 +750,12 @@ export default {
     "ui.validation.storage.typeRequired": "请选择存储类型",
     "ui.validation.storage.accessUrlPrefixRequired": "访问地址前缀不能为空",
     "ui.validation.vault.nameRequired": "仓库名称不能为空",
+    "ui.validation.nameRequired": "名称不能为空",
+    "ui.validation.nameTooLong": "单个目录或文件名不能超过 255 个字符",
+    "ui.validation.nameIllegalChars": "名称中不能包含非法字符 (例如: \\ : * ? \" < > |)",
+    "ui.validation.nameReservedDot": "名称不能为特殊目录 '.' 或 '..'",
+    "ui.validation.nameReservedWindows": "名称 \"{{name}}\" 是系统保留关键字，请使用其他名称",
+    "ui.validation.nameInvalidWrap": "目录或文件名首尾不能包含空格或点号",
 
     // --- api.handle ---
     "api.git.list.error": "获取 Git 配置列表失败",

@@ -238,6 +238,8 @@ export default {
     "ui.vault.createVaultFirst": "まずノートライブラリを作成してから管理してください",
     "ui.vault.goToVaultManagement": "ノートライブラリ管理へ移動",
     "ui.vault.setAsDefault": "デフォルトに設定",
+    "ui.vault.rebuildIndex": "全文検索インデックスを再構築",
+    "ui.vault.rebuildIndexConfirm": "このノートブックの全文検索インデックスを再構築してもよろしいですか？この操作により、すべてのノートが再スキャンされ、インデックスに登録されます。",
 
     // --- ui.note ---
     "ui.note.note": "ノート",
@@ -248,6 +250,7 @@ export default {
     "ui.note.maximize": "最大化",
     "ui.note.exitMaximize": "最大化解除",
     "ui.note.editNote": "ノートの編集",
+    "ui.note.downloadMarkdown": "Markdown ソースファイルをダウンロード",
     "ui.note.search": "検索",
     "ui.note.searchPlaceholder": "ノートを検索...",
     "ui.note.noteTitlePlaceholder": "ノートタイトル (例: note.md)",
@@ -261,6 +264,13 @@ export default {
     "ui.note.renameNotePlaceholder": "新しいノート名を入力してください (例: new-note.md)",
     "ui.note.renameSuccess": "ノートの名前変更が成功しました",
     "ui.note.deleteNoteConfirm": "ノート \"{{title}}\" を削除してもよろしいですか？",
+    "ui.note.deleteFolderConfirm": "ディレクトリ \"{{title}}\" を削除してもよろしいですか？この操作は元に戻せません！",
+    "ui.note.deleteFolderNotEmpty": "このディレクトリにはサブディレクトリ、ノート、または添付ファイルが存在します。空のディレクトリのみ削除可能です。",
+    "ui.note.deleteFolderChecking": "ディレクトリの内容を確認しています。お待ちください...",
+    "ui.note.newFolder": "新規ディレクトリ",
+    "ui.note.folderNamePlaceholder": "ディレクトリ名を入力してください（例: projects）",
+    "ui.note.folderNameRequired": "ディレクトリ名は必須です",
+    "ui.note.folderAlreadyExists": "ディレクトリ \"{{name}}\" は既に存在します！",
     "ui.note.permanentDeleteConfirm": "ノート \"{{title}}\" を永久削除してもよろしいですか？この操作は元に戻せません！",
     "ui.note.restoreNoteConfirm": "ノート \"{{title}}\" を復元してもよろしいですか？",
     "ui.note.clearRecycleConfirm": "ノートのゴミ箱を空にしますか？この操作は元に戻せません！",
@@ -276,6 +286,8 @@ export default {
     "ui.note.sortDesc": "降順",
     "ui.note.viewFlat": "フラット表示",
     "ui.note.viewFolder": "フォルダ表示",
+    "ui.note.viewFlatNotes": "ノートをフラット表示",
+    "ui.note.viewFlatFiles": "添付ファイルをフラット表示",
     "ui.note.editorHr": "区切り線",
     "ui.note.exportPdfPlanned": "PDF 出力機能は開発中です...",
     "ui.note.undo": "元に戻す",
@@ -738,6 +750,12 @@ export default {
     "ui.validation.storage.typeRequired": "ストレージタイプを選択してください",
     "ui.validation.storage.accessUrlPrefixRequired": "アクセス URL プレフィックスは空にできません",
     "ui.validation.vault.nameRequired": "リポジトリ名は空にできません",
+    "ui.validation.nameRequired": "名前は必須です",
+    "ui.validation.nameTooLong": "ディレクトリ名またはファイル名は255文字以内でなければなりません",
+    "ui.validation.nameIllegalChars": "名前に無効な文字を含めることはできません（例: \\ : * ? \" < > |）",
+    "ui.validation.nameReservedDot": "名前は特殊ディレクトリ '.' または '..' にすることはできません",
+    "ui.validation.nameReservedWindows": "名前 \"{{name}}\" はシステムで予約されたキーワードです。別の名前を使用してください",
+    "ui.validation.nameInvalidWrap": "ディレクトリ名またはファイル名の先頭と末尾にはスペースまたはドットを含めることはできません",
 
     // --- api.handle ---
     "api.git.list.error": "Git 設定リストの取得に失敗しました",
@@ -880,5 +898,8 @@ export default {
     "ui.syncLog.action.delete": "永続削除",
     "ui.syncLog.action.rename": "名前変更",
     "ui.syncLog.action.restore": "復元",
+    "ui.file.upload": "添付ファイルをアップロード",
+    "ui.file.uploading": "アップロード中...",
+    "ui.file.uploadSuccess": "添付ファイルのアップロードが完了しました",
 };
 

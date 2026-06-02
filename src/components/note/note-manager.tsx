@@ -16,6 +16,7 @@ import { NoteHistoryModal } from "./note-history-modal";
 import { NoteEditor } from "./note-editor";
 import { CanvasViewer } from "./canvas-viewer";
 import { NoteList } from "./note-list";
+import { useAppStore } from "@/stores/app-store";
 
 
 interface NoteManagerProps {
@@ -53,9 +54,11 @@ export function NoteManager({
     });
     const [searchKeyword, setSearchKeyword] = useState("");
 
-    // Lifted state for folder navigation (survives editor unmount)
-    const [currentPath, setCurrentPath] = useState("");
-    const [currentPathHash, setCurrentPathHash] = useState("");
+    // Global state for folder navigation (survives editor unmount and syncs with URL)
+    const currentPath = useAppStore(state => state.currentPath);
+    const currentPathHash = useAppStore(state => state.currentPathHash);
+    const setCurrentPath = useAppStore(state => state.setCurrentPath);
+    const setCurrentPathHash = useAppStore(state => state.setCurrentPathHash);
     const [pathHashMap, setPathHashMap] = useState<Record<string, string>>({});
 
     // Lifted share filter state (survives editor unmount)

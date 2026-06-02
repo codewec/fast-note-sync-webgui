@@ -238,6 +238,8 @@ export default {
     "ui.vault.createVaultFirst": "먼저 노트 저장소를 생성한 후 관리하세요",
     "ui.vault.goToVaultManagement": "노트 저장소 관리로 이동",
     "ui.vault.setAsDefault": "기본으로 설정",
+    "ui.vault.rebuildIndex": "전체 텍스트 검색 인덱스 다시 빌드",
+    "ui.vault.rebuildIndexConfirm": "이 노트 저장소의 전체 텍스트 검색 인덱스를 다시 빌드하시겠습니까? 이 작업은 모든 노트를 다시 스캔하고 인덱싱합니다.",
 
     // --- ui.note ---
     "ui.note.note": "노트",
@@ -248,6 +250,7 @@ export default {
     "ui.note.maximize": "최대화",
     "ui.note.exitMaximize": "최대화 종료",
     "ui.note.editNote": "노트 편집",
+    "ui.note.downloadMarkdown": "Markdown 소스 파일 다운로드",
     "ui.note.search": "검색",
     "ui.note.searchPlaceholder": "노트 검색...",
     "ui.note.noteTitlePlaceholder": "노트 제목 (예: note.md)",
@@ -261,6 +264,13 @@ export default {
     "ui.note.renameNotePlaceholder": "새 노트 이름을 입력하세요 (예: new-note.md)",
     "ui.note.renameSuccess": "노트 이름 변경 성공",
     "ui.note.deleteNoteConfirm": "노트 \"{{title}}\" 를 삭제하시겠습니까?",
+    "ui.note.deleteFolderConfirm": "디렉토리 \"{{title}}\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다!",
+    "ui.note.deleteFolderNotEmpty": "해당 디렉토리에는 하위 디렉토리, 노트 또는 첨부 파일이 있습니다. 빈 디렉토리만 삭제할 수 있습니다!",
+    "ui.note.deleteFolderChecking": "디렉토리 내용을 확인하는 중입니다. 잠시 기다려 주세요...",
+    "ui.note.newFolder": "새 디렉토리",
+    "ui.note.folderNamePlaceholder": "디렉토리 이름을 입력하세요 (예: projects)",
+    "ui.note.folderNameRequired": "디렉토리 이름은 비워둘 수 없습니다",
+    "ui.note.folderAlreadyExists": "디렉토리 \"{{name}}\"이(가) 이미 존재합니다!",
     "ui.note.permanentDeleteConfirm": "노트 \"{{title}}\" 를 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다!",
     "ui.note.restoreNoteConfirm": "노트 \"{{title}}\" 를 복구하시겠습니까?",
     "ui.note.clearRecycleConfirm": "노트 휴지통을 비우시겠습니까? 이 작업은 되돌릴 수 없습니다!",
@@ -276,6 +286,8 @@ export default {
     "ui.note.sortDesc": "내림차순",
     "ui.note.viewFlat": "플랫 뷰",
     "ui.note.viewFolder": "폴더 뷰",
+    "ui.note.viewFlatNotes": "노트 평면 보기",
+    "ui.note.viewFlatFiles": "첨부 파일 평면 보기",
     "ui.note.editorHr": "구분선",
     "ui.note.exportPdfPlanned": "PDF 내보내기 기능 개발 중...",
     "ui.note.undo": "실행 취소",
@@ -738,6 +750,12 @@ export default {
     "ui.validation.storage.typeRequired": "저장소 유형을 선택하세요",
     "ui.validation.storage.accessUrlPrefixRequired": "접근 주소 접두사는 비워둘 수 없습니다",
     "ui.validation.vault.nameRequired": "저장소 이름은 비워둘 수 없습니다",
+    "ui.validation.nameRequired": "이름은 비워둘 수 없습니다",
+    "ui.validation.nameTooLong": "디렉토리 또는 파일 이름은 255자를 초과할 수 없습니다",
+    "ui.validation.nameIllegalChars": "이름에는 잘못된 문자를 포함할 수 없습니다 (예: \\ : * ? \" < > |)",
+    "ui.validation.nameReservedDot": "이름은 특수 디렉토리 '.' 또는 '..'일 수 없습니다",
+    "ui.validation.nameReservedWindows": "이름 \"{{name}}\"은(는) 시스템 예약 키워드입니다. 다른 이름을 사용하세요",
+    "ui.validation.nameInvalidWrap": "디렉토리 또는 파일 이름은 공백이나 점으로 시작하거나 끝날 수 없습니다",
 
     // --- api.handle ---
     "api.git.list.error": "Git 설정 목록 가져오기 실패",
@@ -880,5 +898,8 @@ export default {
     "ui.syncLog.action.delete": "영구 삭제",
     "ui.syncLog.action.rename": "이름 변경",
     "ui.syncLog.action.restore": "복원",
+    "ui.file.upload": "첨부 파일 업로드",
+    "ui.file.uploading": "업로드 중...",
+    "ui.file.uploadSuccess": "첨부 파일 업로드 성공",
 };
 

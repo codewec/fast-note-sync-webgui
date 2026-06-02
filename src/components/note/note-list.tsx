@@ -1,9 +1,10 @@
-import { NotepadText, Trash2, RefreshCw, Plus, Calendar, Clock, ChevronLeft, ChevronRight, History, Search, X, SortDesc, SortAsc, RotateCcw, Eye, Pencil, Folder as FolderIcon, ChevronDown, FolderSearch, TextCursorInput, Share2, Library, FileText, Paperclip, Image, Music, Video, FileCode, Upload } from "lucide-react";
+import { NotepadText, Trash2, RefreshCw, Plus, Calendar, Clock, ChevronLeft, ChevronRight, History, Search, X, SortDesc, SortAsc, RotateCcw, Eye, Pencil, Folder as FolderIcon, ChevronDown, FolderSearch, TextCursorInput, Share2, Library, FileText, Paperclip, Image, Music, Video, FileCode, Upload, FolderPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConfirmDialog } from "@/components/context/confirm-dialog-context";
 import { useNoteHandle } from "@/components/api-handle/note-handle";
 import { useShareHandle } from "@/components/api-handle/share-handle";
+import { toast } from "@/components/common/Toast";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -206,7 +207,7 @@ function DroppableBreadcrumbButton({ path, children, className }: DroppableBread
 
 export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateNote, page, setPage, pageSize, setPageSize, onViewHistory, isRecycle = false, searchKeyword, setSearchKeyword, currentPath, setCurrentPath, currentPathHash, setCurrentPathHash, pathHashMap, setPathHashMap, shareFilter, setShareFilter, viewMode, setViewMode }: NoteListProps) {
     const { t } = useTranslation();
-    const { handleNoteList, handleDeleteNote, handleRestoreNote, handleFolderList, handleFolderNotes, handlePermanentDeleteNote, handleClearNoteRecycle, handleRenameNote, handleNoteListByPaths, handleDeleteFolder } = useNoteHandle();
+    const { handleNoteList, handleDeleteNote, handleRestoreNote, handleFolderList, handleFolderNotes, handlePermanentDeleteNote, handleClearNoteRecycle, handleRenameNote, handleNoteListByPaths, handleDeleteFolder, handleCreateFolder } = useNoteHandle();
     const { handleGetNoteSharePaths } = useShareHandle();
     const { openConfirmDialog } = useConfirmDialog();
 
@@ -455,10 +456,11 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
     };
 
     useEffect(() => {
+        console.log("[NoteList] fetchNotes triggered:", { currentPath, currentPathHash });
         fetchNotes(page, pageSize, filePage, filePageSize, debouncedKeyword);
         setSelectedPaths(new Set()); // 清空选中
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [vault, page, pageSize, filePage, filePageSize, debouncedKeyword, isRecycle, searchMode, sortBy, sortOrder, viewMode, currentPath, shareFilter, shareFilterActiveDep]);
+    }, [vault, page, pageSize, filePage, filePageSize, debouncedKeyword, isRecycle, searchMode, sortBy, sortOrder, viewMode, currentPath, currentPathHash, shareFilter, shareFilterActiveDep]);
 
     useEffect(() => {
         if (debouncedKeyword) {
@@ -534,6 +536,101 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
         });
     };
 
+    const validateName = (name: string, isPath: boolean = false): { isValid: boolean; reasonKey: string; params?: any } => {
+        const trimmed = name.trim();
+        if (!trimmed) {
+            return { isValid: false, reasonKey: "ui.validation.nameRequired" };
+        }
+
+        // 分隔出所有路径分段进行逐一校验
+        const segments = isPath ? trimmed.split('/') : [trimmed];
+
+        // Windows 禁用字符正则（如果 isPath 为 true，排除 '/'）
+        const illegalCharRegex = isPath 
+            ? /[\\:*?"<>|]/ 
+            : /[\\/:*?"<>|]/;
+
+        const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?$/i;
+
+        for (const segment of segments) {
+            const segTrimmed = segment.trim();
+            if (!segTrimmed) {
+                continue; // 忽略连续的斜杠
+            }
+
+            // 1. 长度限制 (NTFS/EXT4 单段最大 255 字符)
+            if (segTrimmed.length > 255) {
+                return { isValid: false, reasonKey: "ui.validation.nameTooLong" };
+            }
+
+            // 2. 非法字符限制
+            if (illegalCharRegex.test(segTrimmed)) {
+                return { isValid: false, reasonKey: "ui.validation.nameIllegalChars" };
+            }
+
+            // 3. 特殊段限制
+            if (segTrimmed === "." || segTrimmed === "..") {
+                return { isValid: false, reasonKey: "ui.validation.nameReservedDot" };
+            }
+
+            // 4. Windows 保留名称校验
+            if (reservedNames.test(segTrimmed)) {
+                return { isValid: false, reasonKey: "ui.validation.nameReservedWindows", params: { name: segTrimmed } };
+            }
+
+            // 5. 首尾空字符或点校验
+            if (segment.startsWith(' ') || segment.endsWith(' ') || segment.startsWith('.') || segment.endsWith('.')) {
+                return { isValid: false, reasonKey: "ui.validation.nameInvalidWrap" };
+            }
+        }
+
+        return { isValid: true, reasonKey: "" };
+    };
+
+    const onCreateFolder = () => {
+        let newFolderName = "";
+        openConfirmDialog(
+            t("ui.note.newFolder"),
+            "confirm",
+            () => {
+                const trimmedName = newFolderName.trim();
+                const validation = validateName(trimmedName, false);
+                if (!validation.isValid) {
+                    toast.error(t(validation.reasonKey, validation.params) as string);
+                    return;
+                }
+
+                // 本地查重 / Local conflict check
+                const nameLower = trimmedName.toLowerCase();
+                const exists = folders.some(f => {
+                    const lastSegment = f.path.split("/").pop() || f.path;
+                    return lastSegment.toLowerCase() === nameLower;
+                });
+
+                if (exists) {
+                    toast.error(t("ui.note.folderAlreadyExists", { name: trimmedName }));
+                    return;
+                }
+
+                // 拼装完整路径 / Assemble full path
+                const newPath = currentPath ? `${currentPath}/${trimmedName}` : trimmedName;
+
+                handleCreateFolder(vault, newPath, () => {
+                    fetchNotes();
+                });
+            },
+            <div className="pt-2">
+                <Input
+                    autoFocus
+                    placeholder={t("ui.note.folderNamePlaceholder")}
+                    onChange={(e) => {
+                        newFolderName = e.target.value;
+                    }}
+                />
+            </div>
+        );
+    };
+
     const onRestore = (e: React.MouseEvent, note: Note) => {
         e.stopPropagation();
         const title = note.path.replace(/\.md$/, "");
@@ -572,9 +669,16 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
             () => {
                 if (!newPath || newPath === baseRelativePath) return;
 
+                const trimmed = newPath.trim();
+                const validation = validateName(trimmed, true);
+                if (!validation.isValid) {
+                    toast.error(t(validation.reasonKey, validation.params) as string);
+                    return;
+                }
+
                 // 拼接新相对路径的扩展名
                 // Combine the new relative path with its file extension
-                const finalPath = newPath.endsWith(extension) ? newPath : newPath + extension;
+                const finalPath = trimmed.endsWith(extension) ? trimmed : trimmed + extension;
 
                 handleRenameNote({
                     vault,
@@ -626,7 +730,14 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
             () => {
                 if (!newName || newName === baseName) return;
 
-                const finalName = newName.endsWith(extension) ? newName : newName + extension;
+                const trimmed = newName.trim();
+                const validation = validateName(trimmed, false);
+                if (!validation.isValid) {
+                    toast.error(t(validation.reasonKey, validation.params) as string);
+                    return;
+                }
+
+                const finalName = trimmed.endsWith(extension) ? trimmed : trimmed + extension;
 
                 const oldDir = file.path.includes("/")
                     ? file.path.substring(0, file.path.lastIndexOf("/") + 1)
@@ -991,6 +1102,12 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                         {uploading ? t("ui.file.uploading", "上传中...") : t("ui.file.upload", "上传附件")}
                                     </span>
                                 </Button>
+                                {viewMode === "folder" && (
+                                    <Button onClick={onCreateFolder} variant="outline" className="rounded-xl shrink-0">
+                                        <FolderPlus className="h-4 w-4 sm:mr-2" />
+                                        <span className="hidden sm:inline">{t("ui.note.newFolder")}</span>
+                                    </Button>
+                                )}
                                 <Button onClick={onCreateNote} className="rounded-xl shrink-0">
                                     <Plus className="h-4 w-4 sm:mr-2" />
                                     <span className="hidden sm:inline">{t("ui.note.newNote")}</span>

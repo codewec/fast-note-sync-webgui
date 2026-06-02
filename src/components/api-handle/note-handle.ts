@@ -225,6 +225,32 @@ export function useNoteHandle() {
         }
     }, [getHeaders])
 
+    const handleCreateFolder = useCallback(async (vault: string, path: string, callback: () => void) => {
+        try {
+            const body = {
+                vault,
+                path,
+            }
+            const response = await fetch(addCacheBuster(`${env.API_URL}/api/folder`), {
+                method: "POST",
+                body: JSON.stringify(body),
+                headers: getHeaders(),
+            })
+            if (!response.ok) {
+                throw new Error("Network response was not ok")
+            }
+            const res: NoteResponse<unknown> = await response.json()
+            if (res.code > 0 && res.code <= 200) {
+                toast.success(res.message)
+                callback()
+            } else {
+                toast.error(res.message + (res.details ? ": " + res.details.join(", ") : ""))
+            }
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : String(error))
+        }
+    }, [getHeaders])
+
     // 永久删除笔记 (从回收站彻底删除)
     const handlePermanentDeleteNote = useCallback(async (vault: string, path: string, pathHash: string | undefined, callback: () => void) => {
         try {
@@ -616,6 +642,7 @@ export function useNoteHandle() {
         handleFolderList,
         handleFolderNotes,
         handleDeleteFolder,
+        handleCreateFolder,
         handleGetNote,
         handleSaveNote,
         handleDeleteNote,
@@ -633,6 +660,7 @@ export function useNoteHandle() {
         handleFolderList,
         handleFolderNotes,
         handleDeleteFolder,
+        handleCreateFolder,
         handleGetNote,
         handleSaveNote,
         handleDeleteNote,

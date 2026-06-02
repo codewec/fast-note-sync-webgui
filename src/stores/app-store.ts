@@ -31,24 +31,33 @@ interface AppState {
   /** 版本信息 */
   versionInfo: VersionInfo | null;
   /** 需要高亮的令牌 ID */
+  /** Needs highlight token ID / 需要高亮的令牌 ID */
   highlightTokenId: number | null;
+  /** Current path in note manager / 当前文件夹路径 */
+  currentPath: string;
+  /** Current path hash in note manager / 当前文件夹路径 Hash */
+  currentPathHash: string;
 
   // Actions
-  /** 设置当前模块 */
+  /** Set current module / 设置当前模块 */
   setModule: (module: ModuleId, trashType?: 'notes' | 'files') => void;
-  /** 设置版本信息 */
+  /** Set version info / 设置版本信息 */
   setVersionInfo: (info: VersionInfo) => void;
-  /** 切换 Zen 模式 */
+  /** Toggle Zen mode / 切换 Zen 模式 */
   toggleZenMode: () => void;
-  /** 设置 Zen 模式 */
+  /** Set Zen mode / 设置 Zen 模式 */
   setZenMode: (enabled: boolean) => void;
-  /** 切换用户菜单 */
+  /** Toggle user menu / 切换用户菜单 */
   toggleUserMenu: () => void;
-  /** 设置用户菜单状态 */
+  /** Set user menu state / 设置用户菜单状态 */
   setUserMenuOpen: (open: boolean) => void;
-  /** 设置需要高亮的令牌 ID */
+  /** Set needs highlight token ID / 设置需要高亮的令牌 ID */
   setHighlightTokenId: (tokenId: number | null) => void;
-  /** 重置应用状态（用于登出） */
+  /** Set current path / 设置当前文件夹路径 */
+  setCurrentPath: (path: string) => void;
+  /** Set current path hash / 设置当前文件夹路径 Hash */
+  setCurrentPathHash: (hash: string) => void;
+  /** Reset app state / 重置应用状态（用于登出） */
   resetState: () => void;
 }
 
@@ -60,6 +69,8 @@ const defaultState = {
   trashType: 'notes' as 'notes' | 'files',
   versionInfo: null,
   highlightTokenId: null,
+  currentPath: '',
+  currentPathHash: '',
 };
 
 /**
@@ -90,6 +101,10 @@ export const useAppStore = create<AppState>()(
       setVersionInfo: (info) => set({ versionInfo: info }),
 
       setHighlightTokenId: (tokenId) => set({ highlightTokenId: tokenId }),
+
+      setCurrentPath: (path) => set({ currentPath: path }),
+
+      setCurrentPathHash: (hash) => set({ currentPathHash: hash }),
 
       resetState: () => {
         // 重置内存状态

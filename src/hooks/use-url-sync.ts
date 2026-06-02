@@ -12,7 +12,7 @@ export function useUrlSync(
     activeVault: string | null,
     setActiveVault: (vault: string | null) => void
 ) {
-    const { currentModule, setModule, trashType } = useAppStore();
+    const { currentModule, setModule, trashType, currentPath, currentPathHash } = useAppStore();
 
     // 用于防止 URL 更新触发的状态更新再次触发 URL 更新（无限循环）
     const isUpdatingFromUrl = useRef(false);
@@ -36,6 +36,8 @@ export function useUrlSync(
             const params = new URLSearchParams(window.location.search);
             const vault = params.get('vault');
             const type = params.get('type') as 'notes' | 'files' | null;
+            const path = params.get('path') || '';
+            const pathHash = params.get('pathHash') || '';
 
             // 如果有 vault 参数，设置 activeVault
             if (vault && vault !== activeVaultRef.current) {
@@ -62,6 +64,23 @@ export function useUrlSync(
                     setModule(module, type);
                 } else {
                     setModule(module);
+                }
+            }
+
+            // 同步路径状态 / Sync path states
+            const state = useAppStore.getState();
+            console.log("[useUrlSync] Popstate URL change:", { module, path, pathHash, currentStorePath: state.currentPath });
+            if (module === 'notes') {
+                if (state.currentPath !== path) {
+                    state.setCurrentPath(path);
+                }
+                if (state.currentPathHash !== pathHash) {
+                    state.setCurrentPathHash(pathHash);
+                }
+            } else {
+                if (state.currentPath !== '' || state.currentPathHash !== '') {
+                    state.setCurrentPath('');
+                    state.setCurrentPathHash('');
                 }
             }
 
@@ -93,6 +112,10 @@ export function useUrlSync(
         // 添加参数
         if (activeVault) params.set('vault', activeVault);
         if (currentModule === 'trash' && trashType) params.set('type', trashType);
+        if (currentModule === 'notes') {
+            if (currentPath) params.set('path', currentPath);
+            if (currentPathHash) params.set('pathHash', currentPathHash);
+        }
 
         // 构造查询字符串，移除无值参数的等号 (例如 ?notes=&vault=... -> ?notes&vault=...)
         const search = params.toString().replace(/=(?=&|$)/g, '');
@@ -103,6 +126,6 @@ export function useUrlSync(
             window.history.pushState(null, '', newUrl);
         }
 
-    }, [currentModule, activeVault, trashType]);
+    }, [currentModule, activeVault, trashType, currentPath, currentPathHash]);
 
 }
