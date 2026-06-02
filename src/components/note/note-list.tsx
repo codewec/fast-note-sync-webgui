@@ -822,7 +822,7 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input
                                 type="text"
-                                placeholder={t("ui.note.searchPlaceholder")}
+                                placeholder={filterType === "files" ? t("ui.file.searchPlaceholder") : t("ui.note.searchPlaceholder")}
                                 className="pl-9 pr-14 rounded-xl"
                                 value={searchKeyword}
                                 onChange={(e) => setSearchKeyword(e.target.value)}
@@ -861,7 +861,8 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             onClick={() => setSearchMode("content")}
-                                            className={`rounded-lg flex items-center justify-between text-xs sm:text-sm ${searchMode === "content" ? "bg-accent text-accent-foreground font-medium" : ""}`}
+                                            disabled={filterType === "files"}
+                                            className={`rounded-lg flex items-center justify-between text-xs sm:text-sm ${searchMode === "content" ? "bg-accent text-accent-foreground font-medium" : ""} ${filterType === "files" ? "opacity-40" : ""}`}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <NotepadText className="h-4 w-4" />
