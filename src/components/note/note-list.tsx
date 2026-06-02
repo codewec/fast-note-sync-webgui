@@ -278,6 +278,7 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
     const [notes, setNotes] = useState<Note[]>([]);
     const [loading, setLoading] = useState(false);
     const [totalRows, setTotalRows] = useState(0);
+    const [filterType, setFilterType] = useState<'notes' | 'files'>('notes');
     const [debouncedKeyword, setDebouncedKeyword] = useState(searchKeyword);
     const [searchMode, setSearchMode] = useState<SearchMode>("path");
 
@@ -436,14 +437,15 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
 
     useEffect(() => {
         if (debouncedKeyword) {
-            setViewMode(viewMode === "flat-file" ? "flat-file" : "flat");
+            setViewMode(filterType === "files" ? "flat-file" : "flat");
         }
         setPage(1);
         setFilePage(1);
-    }, [debouncedKeyword, currentPath, viewMode, setPage]);
+    }, [debouncedKeyword, filterType, setPage]);
 
     const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= Math.ceil(totalRows / pageSize)) {
+        const currentTotalRows = viewMode === "folder" ? mergedList.length : totalRows;
+        if (newPage >= 1 && newPage <= Math.ceil(currentTotalRows / pageSize)) {
             setPage(newPage);
         }
     };
@@ -742,7 +744,7 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
             data: f
         }));
 
-        const combined = [...noteItems, ...fileItems];
+        let combined = [...noteItems, ...fileItems];
 
         // 排序逻辑 / Sorting logic
         combined.sort((a, b) => {
@@ -760,7 +762,10 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
         });
 
         return combined;
-    }, [notes, files, viewMode, isRecycle, sortBy, sortOrder]);
+    }, [notes, files, viewMode, isRecycle, sortBy, sortOrder, filterType]);
+
+    // 计算融合后列表的总记录数，用于在当前目录下过滤时的统一分页
+    const displayTotalRows = viewMode === "folder" ? mergedList.length : totalRows;
 
     // 对融合后的列表做前端切片分页 / Frontend pagination for the merged list
     const paginatedItems = useMemo(() => {
@@ -798,7 +803,10 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                             onClick={() => {
                                 const next = shareFilter === 'active' ? null : 'active';
                                 setShareFilter(next);
-                                if (next) setPage(1);
+                                if (next) {
+                                    setPage(1);
+                                    setViewMode("flat");
+                                }
                             }}
                         >
                             <Share2 className="h-3 w-3 mr-1" />
@@ -837,10 +845,14 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                             <ChevronDown className="h-3 w-3" />
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="rounded-xl min-w-32">
+                                    <DropdownMenuContent align="end" className="rounded-xl min-w-40 p-1.5 space-y-1">
+                                        {/* 第一组：搜索模式 */}
+                                        <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider select-none">
+                                            {t("ui.note.searchModeLabel", "搜索模式")}
+                                        </div>
                                         <DropdownMenuItem
                                             onClick={() => setSearchMode("path")}
-                                            className={`rounded-lg flex items-center justify-between ${searchMode === "path" ? "bg-accent" : ""}`}
+                                            className={`rounded-lg flex items-center justify-between text-xs sm:text-sm ${searchMode === "path" ? "bg-accent text-accent-foreground font-medium" : ""}`}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <FolderSearch className="h-4 w-4" />
@@ -849,7 +861,7 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             onClick={() => setSearchMode("content")}
-                                            className={`rounded-lg flex items-center justify-between ${searchMode === "content" ? "bg-accent" : ""}`}
+                                            className={`rounded-lg flex items-center justify-between text-xs sm:text-sm ${searchMode === "content" ? "bg-accent text-accent-foreground font-medium" : ""}`}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <NotepadText className="h-4 w-4" />
@@ -857,6 +869,26 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                             </div>
                                         </DropdownMenuItem>
 
+                                        <div className="h-px bg-border my-1" />
+
+                                        {/* 第二组：限制类型 */}
+                                        <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider select-none">
+                                            {t("ui.note.searchTypeLimit", "限制类型")}
+                                        </div>
+
+                                        <DropdownMenuItem
+                                            onClick={() => setFilterType("notes")}
+                                            className={`rounded-lg flex items-center justify-between text-xs sm:text-sm ${filterType === "notes" ? "bg-accent text-accent-foreground font-medium" : ""}`}
+                                        >
+                                            <span>{t("ui.note.note", "仅看笔记")}</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => setFilterType("files")}
+                                            disabled={searchMode === "content"}
+                                            className={`rounded-lg flex items-center justify-between text-xs sm:text-sm ${filterType === "files" ? "bg-accent text-accent-foreground font-medium" : ""} ${searchMode === "content" ? "opacity-40" : ""}`}
+                                        >
+                                            <span>{t("ui.file.file", "仅看附件")}</span>
+                                        </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
@@ -885,43 +917,48 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
             {/* 第二行工具栏：平铺/目录切换 (非回收站模式) */}
             {!isRecycle && (
                 <div className="flex flex-wrap items-center gap-4 py-2 px-2 bg-muted/30 rounded-xl border border-border/50">
-                    {!shareFilter && (
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center h-8 rounded-lg border border-border overflow-hidden bg-background shadow-sm">
-                                <button
-                                    className={`px-4 h-full text-xs font-medium transition-colors ${viewMode === 'folder' ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                                    onClick={() => {
-                                        setSearchKeyword("");
-                                        setDebouncedKeyword("");
-                                        setViewMode("folder");
-                                    }}
-                                >
-                                    {t("ui.note.viewFolder")}
-                                </button>
-                                <button
-                                    className={`px-4 h-full text-xs font-medium transition-colors border-l border-border ${viewMode === 'flat' ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                                    onClick={() => setViewMode("flat")}
-                                >
-                                    {t("ui.note.viewFlatNotes")}
-                                </button>
-                                <button
-                                    className={`px-4 h-full text-xs font-medium transition-colors border-l border-border ${viewMode === 'flat-file' ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                                    onClick={() => setViewMode("flat-file")}
-                                >
-                                    {t("ui.note.viewFlatFiles")}
-                                </button>
-                            </div>
-                            <span className="text-sm font-medium text-muted-foreground mr-2">
-                                {viewMode === 'flat-file' ? (
-                                    `${filesTotalRows} ${t("ui.file.file")}`
-                                ) : viewMode === 'folder' ? (
-                                    `${totalRows} ${t("ui.note.note")} / ${filesTotalRows} ${t("ui.file.file")}`
-                                ) : (
-                                    `${totalRows} ${t("ui.note.note")}`
-                                )}
-                            </span>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center h-8 rounded-lg border border-border overflow-hidden bg-background shadow-sm">
+                            <button
+                                className={`px-4 h-full text-xs font-medium transition-colors ${viewMode === 'folder' ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                                onClick={() => {
+                                    setSearchKeyword("");
+                                    setDebouncedKeyword("");
+                                    setViewMode("folder");
+                                    setShareFilter(null);
+                                }}
+                            >
+                                {t("ui.note.viewFolder")}
+                            </button>
+                            <button
+                                className={`px-4 h-full text-xs font-medium transition-colors border-l border-border ${viewMode === 'flat' ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                                onClick={() => {
+                                    setViewMode("flat");
+                                    setShareFilter(null);
+                                }}
+                            >
+                                {t("ui.note.viewFlatNotes")}
+                            </button>
+                            <button
+                                className={`px-4 h-full text-xs font-medium transition-colors border-l border-border ${viewMode === 'flat-file' ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                                onClick={() => {
+                                    setViewMode("flat-file");
+                                    setShareFilter(null);
+                                }}
+                            >
+                                {t("ui.note.viewFlatFiles")}
+                            </button>
                         </div>
-                    )}
+                        <span className="text-sm font-medium text-muted-foreground mr-2">
+                            {viewMode === 'flat-file' ? (
+                                `${filesTotalRows} ${t("ui.file.file")}`
+                            ) : viewMode === 'folder' ? (
+                                `${totalRows} ${t("ui.note.note")} / ${filesTotalRows} ${t("ui.file.file")}`
+                            ) : (
+                                `${totalRows} ${t("ui.note.note")}`
+                            )}
+                        </span>
+                    </div>
 
                     {/* 排序选择 */}
                     <div className="flex items-center h-8 rounded-xl border border-border overflow-hidden bg-background shadow-sm ml-auto">
@@ -1318,11 +1355,11 @@ export function NoteList({ vault, vaults, onVaultChange, onSelectNote, onCreateN
                                                     })}
                                                 </div>
                                                 {/* 融合列表统一分页 */}
-                                                {Math.ceil(totalRows / pageSize) > 1 && (
+                                                {Math.ceil(displayTotalRows / pageSize) > 1 && (
                                                     <div className="flex justify-end gap-2 pt-2">
                                                         <Button variant="outline" size="sm" onClick={() => handlePageChange(page - 1)} disabled={page === 1} className="rounded-xl h-8 px-2"><ChevronLeft className="h-4 w-4" /></Button>
-                                                        <span className="text-xs font-medium flex items-center px-1">{page} / {Math.ceil(totalRows / pageSize)}</span>
-                                                        <Button variant="outline" size="sm" onClick={() => handlePageChange(page + 1)} disabled={page === Math.ceil(totalRows / pageSize)} className="rounded-xl h-8 px-2"><ChevronRight className="h-4 w-4" /></Button>
+                                                        <span className="text-xs font-medium flex items-center px-1">{page} / {Math.ceil(displayTotalRows / pageSize)}</span>
+                                                        <Button variant="outline" size="sm" onClick={() => handlePageChange(page + 1)} disabled={page === Math.ceil(displayTotalRows / pageSize)} className="rounded-xl h-8 px-2"><ChevronRight className="h-4 w-4" /></Button>
                                                     </div>
                                                 )}
                                             </div>
