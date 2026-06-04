@@ -1,5 +1,5 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog";
-import { GitBranch, UserPlus, HardDrive, Trash2, Clock, Shield, Loader2, Type, Lock, Save, HelpCircle, Github, Send, RefreshCw, Cpu, Download, Globe, Database, ChevronLeft, ChevronRight, SlidersHorizontal, BookOpen, Share2, Zap, Router, Eye, EyeOff, Plus } from "lucide-react";
+import { GitBranch, UserPlus, HardDrive, Trash2, Clock, Shield, Loader2, Type, Lock, Save, HelpCircle, Github, Send, RefreshCw, Cpu, Download, Globe, Database, ChevronLeft, ChevronRight, SlidersHorizontal, BookOpen, Share2, Zap, Router, Eye, EyeOff, Plus, Sliders, Cog } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { addCacheBuster } from "@/lib/utils/cache-buster";
@@ -40,6 +40,30 @@ interface SystemConfig {
     webguiLoginTokenExpiry: string
     webguiLoginTokenBindIp: boolean
     customResponseHeaders?: Record<string, string>
+    defaultPageSize: number
+    maxPageSize: number
+    defaultContextTimeout: number
+    tempPath: string
+    isReturnSussess: boolean
+    syncLogRetentionTime: string
+    downloadSessionTimeout: string
+    workerPoolMaxWorkers: number
+    workerPoolQueueSize: number
+    writeQueueCapacity: number
+    writeQueueTimeout: string
+    writeQueueIdleTime: string
+    wsReadMaxPayloadSize: string
+    wsWriteMaxPayloadSize: string
+    wsParallelEnabled: boolean
+    wsParallelGolimit: number
+    wsCheckUtf8Enabled: boolean
+    wsCompressionEnabled: boolean
+    wsCompressionLevel: number
+    wsCompressionThreshold: number
+    ftsBleveEnabled: boolean
+    ftsBleveStoreRaw: boolean
+    gitName: string
+    gitEmail: string
 }
 
 interface CloudflareConfig {
@@ -148,6 +172,30 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
             }
             if (seconds < 10) {
                 toast.error(t("ui.settings.historySaveDelayMinError"))
+                return
+            }
+        }
+        if (config.syncLogRetentionTime) {
+            if (parseDurationToSeconds(config.syncLogRetentionTime) === null) {
+                toast.error(t("ui.settings.durationFormatError", { field: t("ui.settings.syncLogRetentionTime") }))
+                return
+            }
+        }
+        if (config.downloadSessionTimeout) {
+            if (parseDurationToSeconds(config.downloadSessionTimeout) === null) {
+                toast.error(t("ui.settings.durationFormatError", { field: t("ui.settings.downloadSessionTimeout") }))
+                return
+            }
+        }
+        if (config.writeQueueTimeout) {
+            if (parseDurationToSeconds(config.writeQueueTimeout) === null) {
+                toast.error(t("ui.settings.durationFormatError", { field: t("ui.settings.writeQueueTimeout") }))
+                return
+            }
+        }
+        if (config.writeQueueIdleTime) {
+            if (parseDurationToSeconds(config.writeQueueIdleTime) === null) {
+                toast.error(t("ui.settings.durationFormatError", { field: t("ui.settings.writeQueueIdleTime") }))
                 return
             }
         }
@@ -666,9 +714,13 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                         <Database className="h-4 w-4 mr-2" />
                                         {t("ui.settings.userDatabaseConfig")}
                                     </TabsTrigger>
-                                    <TabsTrigger value="tunnel" className="flex-none px-6 h-12 rounded-none border-y-transparent border-r-transparent border-l-transparent bg-transparent data-[state=active]:bg-card transition-all font-medium text-muted-foreground data-[state=active]:text-primary">
+                                    <TabsTrigger value="tunnel" className="flex-none px-6 h-12 rounded-none border-y-transparent border-x-transparent border-r border-r-border/30 bg-transparent data-[state=active]:bg-card transition-all font-medium text-muted-foreground data-[state=active]:text-primary">
                                         <Router className="h-4 w-4 mr-2" />
                                         {t("ui.settings.tunnelGatewayConfig")}
+                                    </TabsTrigger>
+                                    <TabsTrigger value="advanced" className="flex-none px-6 h-12 rounded-none border-y-transparent border-r-transparent border-l-transparent bg-transparent data-[state=active]:bg-card transition-all font-medium text-muted-foreground data-[state=active]:text-primary">
+                                        <Cog className="h-4 w-4 mr-2" />
+                                        {t("ui.settings.advancedConfig")}
                                     </TabsTrigger>
                                 </TabsList>
                                 {showRightScroll && (
@@ -733,52 +785,6 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                         </div>
                                         <Input value={config.fontSet} onChange={(e) => updateConfig({ fontSet: e.target.value })} placeholder="e.g. /static/fonts/font.css" className="rounded-xl" />
                                         <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.fontSetDesc") }} />
-                                    </div>
-                                    <div className="border-t border-border" />
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
-                                            <span className="text-sm font-medium">{t("ui.settings.customResponseHeaders")}</span>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {headersList.map((item) => (
-                                                <div key={item.id} className="flex gap-2 items-center animate-in fade-in duration-200">
-                                                    <Input
-                                                        value={item.key}
-                                                        onChange={(e) => updateHeaderRow(item.id, e.target.value, item.value)}
-                                                        placeholder={t("ui.settings.headerNamePlaceholder")}
-                                                        className="rounded-xl flex-1"
-                                                    />
-                                                    <span className="text-muted-foreground">:</span>
-                                                    <Input
-                                                        value={item.value}
-                                                        onChange={(e) => updateHeaderRow(item.id, item.key, e.target.value)}
-                                                        placeholder={t("ui.settings.headerValuePlaceholder")}
-                                                        className="rounded-xl flex-1"
-                                                    />
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        type="button"
-                                                        onClick={() => removeHeaderRow(item.id)}
-                                                        className="rounded-xl text-destructive hover:bg-destructive/10 h-10 w-10 shrink-0"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                type="button"
-                                                onClick={addHeaderRow}
-                                                className="rounded-xl mt-1"
-                                            >
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                {t("ui.settings.addHeader")}
-                                            </Button>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.customResponseHeadersDesc") }} />
                                     </div>
                                     <div className="pt-2">
                                         <Button onClick={handleSaveConfig} disabled={saving} className="rounded-xl">
@@ -1152,20 +1158,281 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                                                 <AlertDialogTitle className="text-destructive flex items-center gap-2">
                                                                     <Shield className="h-5 w-5" />
                                                                     {t("ui.settings.downloadFailed")}
-                                                                </AlertDialogTitle>
-                                                                <AlertDialogDescription className="whitespace-pre-wrap break-all mt-2 font-mono text-xs bg-muted/50 p-4 rounded-xl border border-border/50 max-h-60 overflow-y-auto">
-                                                                    {downloadErrorMessage}
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel className="rounded-xl w-full sm:w-auto">{t("ui.common.confirm")}</AlertDialogCancel>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
+                                                                 </AlertDialogTitle>
+                                                                 <AlertDialogDescription className="whitespace-pre-wrap break-all mt-2 font-mono text-xs bg-muted/50 p-4 rounded-xl border border-border/50 max-h-60 overflow-y-auto">
+                                                                     {downloadErrorMessage}
+                                                                 </AlertDialogDescription>
+                                                             </AlertDialogHeader>
+                                                             <AlertDialogFooter>
+                                                                 <AlertDialogCancel className="rounded-xl w-full sm:w-auto">{t("ui.common.confirm")}</AlertDialogCancel>
+                                                             </AlertDialogFooter>
+                                                         </AlertDialogContent>
+                                                     </AlertDialog>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     )}
+                                 </TabsContent>
+
+                                <TabsContent value="advanced" className="p-6 space-y-5 mt-0 outline-none">
+                                    <h2 className="text-lg font-bold text-card-foreground flex items-center gap-2">
+                                        <Cog className="h-5 w-5" />
+                                        {t("ui.settings.advancedConfig")}
+                                    </h2>
+
+                                    {/* 自定义Header头 */}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
+                                            <span className="text-sm font-medium">{t("ui.settings.customResponseHeaders")}</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {headersList.map((item) => (
+                                                <div key={item.id} className="flex gap-2 items-center animate-in fade-in duration-200">
+                                                    <Input
+                                                        value={item.key}
+                                                        onChange={(e) => updateHeaderRow(item.id, e.target.value, item.value)}
+                                                        placeholder={t("ui.settings.headerNamePlaceholder")}
+                                                        className="rounded-xl flex-1"
+                                                    />
+                                                    <span className="text-muted-foreground">:</span>
+                                                    <Input
+                                                        value={item.value}
+                                                        onChange={(e) => updateHeaderRow(item.id, item.key, e.target.value)}
+                                                        placeholder={t("ui.settings.headerValuePlaceholder")}
+                                                        className="rounded-xl flex-1"
+                                                    />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        type="button"
+                                                        onClick={() => removeHeaderRow(item.id)}
+                                                        className="rounded-xl text-destructive hover:bg-destructive/10 h-10 w-10 shrink-0"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
+                                            ))}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                type="button"
+                                                onClick={addHeaderRow}
+                                                className="rounded-xl mt-1"
+                                            >
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                {t("ui.settings.addHeader")}
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.customResponseHeadersDesc") }} />
+                                    </div>
+
+                                    <div className="border-t border-border" />
+
+                                    {/* Git 提交设置 */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+                                            <GitBranch className="h-4 w-4" />
+                                            {t("ui.settings.gitSettings")}
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.gitName")}</Label>
+                                                <Input value={config.gitName || ""} onChange={(e) => updateConfig({ gitName: e.target.value })} placeholder="e.g. FNS Service" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.gitNameDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.gitEmail")}</Label>
+                                                <Input value={config.gitEmail || ""} onChange={(e) => updateConfig({ gitEmail: e.target.value })} placeholder="e.g. fns@email.com" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.gitEmailDesc")}</p>
                                             </div>
                                         </div>
-                                    )}
+                                    </div>
+
+                                    <div className="border-t border-border" />
+
+                                    {/* 应用基础设置 */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+                                            <Sliders className="h-4 w-4" />
+                                            {t("ui.settings.appSettings")}
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.defaultPageSize")}</Label>
+                                                <Input type="number" value={config.defaultPageSize || 10} onChange={(e) => updateConfig({ defaultPageSize: parseInt(e.target.value) || 10 })} placeholder="e.g. 10" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.defaultPageSizeDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.maxPageSize")}</Label>
+                                                <Input type="number" value={config.maxPageSize || 100} onChange={(e) => updateConfig({ maxPageSize: parseInt(e.target.value) || 100 })} placeholder="e.g. 100" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.maxPageSizeDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2 sm:col-span-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.defaultContextTimeout")}</Label>
+                                                <Input type="number" value={config.defaultContextTimeout || 60} onChange={(e) => updateConfig({ defaultContextTimeout: parseInt(e.target.value) || 60 })} placeholder="e.g. 60" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.defaultContextTimeoutDesc")}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-border" />
+
+                                    {/* 存储与日志 */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+                                            <HardDrive className="h-4 w-4" />
+                                            {t("ui.settings.logAndStorageSettings")}
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.tempPath")}</Label>
+                                                <Input value={config.tempPath || ""} onChange={(e) => updateConfig({ tempPath: e.target.value })} placeholder="e.g. storage/temp" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.tempPathDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.syncLogRetentionTime")}</Label>
+                                                <Input value={config.syncLogRetentionTime || ""} onChange={(e) => updateConfig({ syncLogRetentionTime: e.target.value })} placeholder="e.g. 30d, 7d" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.syncLogRetentionTimeDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2 sm:col-span-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.downloadSessionTimeout")}</Label>
+                                                <Input value={config.downloadSessionTimeout || ""} onChange={(e) => updateConfig({ downloadSessionTimeout: e.target.value })} placeholder="e.g. 1h, 30m" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.downloadSessionTimeoutDesc")}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-border" />
+
+                                    {/* 并发与队列 */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+                                            <Cpu className="h-4 w-4" />
+                                            {t("ui.settings.concurrencySettings")}
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.workerPoolMaxWorkers")}</Label>
+                                                <Input type="number" value={config.workerPoolMaxWorkers || 100} onChange={(e) => updateConfig({ workerPoolMaxWorkers: parseInt(e.target.value) || 100 })} placeholder="e.g. 100" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.workerPoolMaxWorkersDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.workerPoolQueueSize")}</Label>
+                                                <Input type="number" value={config.workerPoolQueueSize || 1000} onChange={(e) => updateConfig({ workerPoolQueueSize: parseInt(e.target.value) || 1000 })} placeholder="e.g. 1000" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.workerPoolQueueSizeDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.writeQueueCapacity")}</Label>
+                                                <Input type="number" value={config.writeQueueCapacity || 1000} onChange={(e) => updateConfig({ writeQueueCapacity: parseInt(e.target.value) || 1000 })} placeholder="e.g. 1000" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.writeQueueCapacityDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.writeQueueTimeout")}</Label>
+                                                <Input value={config.writeQueueTimeout || ""} onChange={(e) => updateConfig({ writeQueueTimeout: e.target.value })} placeholder="e.g. 30s, 1m" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.writeQueueTimeoutDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2 sm:col-span-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.writeQueueIdleTime")}</Label>
+                                                <Input value={config.writeQueueIdleTime || ""} onChange={(e) => updateConfig({ writeQueueIdleTime: e.target.value })} placeholder="e.g. 10m, 1h" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.writeQueueIdleTimeDesc")}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-border" />
+
+                                    {/* WebSocket 传输 */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+                                            <Router className="h-4 w-4" />
+                                            {t("ui.settings.websocketSettings")}
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.wsReadMaxPayloadSize")}</Label>
+                                                <Input value={config.wsReadMaxPayloadSize || ""} onChange={(e) => updateConfig({ wsReadMaxPayloadSize: e.target.value })} placeholder="e.g. 128MB" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.wsReadMaxPayloadSizeDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.wsWriteMaxPayloadSize")}</Label>
+                                                <Input value={config.wsWriteMaxPayloadSize || ""} onChange={(e) => updateConfig({ wsWriteMaxPayloadSize: e.target.value })} placeholder="e.g. 128MB" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.wsWriteMaxPayloadSizeDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.wsCompressionLevel")}</Label>
+                                                <Input type="number" min="1" max="9" value={config.wsCompressionLevel || 1} onChange={(e) => updateConfig({ wsCompressionLevel: parseInt(e.target.value) || 1 })} placeholder="e.g. 1" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.wsCompressionLevelDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.wsCompressionThreshold")}</Label>
+                                                <Input type="number" value={config.wsCompressionThreshold || 512} onChange={(e) => updateConfig({ wsCompressionThreshold: parseInt(e.target.value) || 512 })} placeholder="e.g. 512" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.wsCompressionThresholdDesc")}</p>
+                                            </div>
+                                            <div className="space-y-2 sm:col-span-2">
+                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.wsParallelGolimit")}</Label>
+                                                <Input type="number" value={config.wsParallelGolimit || 5} onChange={(e) => updateConfig({ wsParallelGolimit: parseInt(e.target.value) || 5 })} placeholder="e.g. 5" className="rounded-xl" />
+                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.wsParallelGolimitDesc")}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox id="wsParallelEnabled" checked={config.wsParallelEnabled} onCheckedChange={(checked) => updateConfig({ wsParallelEnabled: !!checked })} />
+                                                    <Label htmlFor="wsParallelEnabled" className="text-sm cursor-pointer">{t("ui.settings.wsParallelEnabled")}</Label>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground ml-6">{t("ui.settings.wsParallelEnabledDesc")}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox id="wsCheckUtf8Enabled" checked={config.wsCheckUtf8Enabled} onCheckedChange={(checked) => updateConfig({ wsCheckUtf8Enabled: !!checked })} />
+                                                    <Label htmlFor="wsCheckUtf8Enabled" className="text-sm cursor-pointer">{t("ui.settings.wsCheckUtf8Enabled")}</Label>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground ml-6">{t("ui.settings.wsCheckUtf8EnabledDesc")}</p>
+                                            </div>
+                                            <div className="space-y-1 sm:col-span-2">
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox id="wsCompressionEnabled" checked={config.wsCompressionEnabled} onCheckedChange={(checked) => updateConfig({ wsCompressionEnabled: !!checked })} />
+                                                    <Label htmlFor="wsCompressionEnabled" className="text-sm cursor-pointer">{t("ui.settings.wsCompressionEnabled")}</Label>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground ml-6">{t("ui.settings.wsCompressionEnabledDesc")}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-border" />
+
+                                    {/* 全文搜索 (Bleve FTS) */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+                                            <Database className="h-4 w-4" />
+                                            {t("ui.settings.ftsSettings")}
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox id="ftsBleveEnabled" checked={config.ftsBleveEnabled} onCheckedChange={(checked) => updateConfig({ ftsBleveEnabled: !!checked })} />
+                                                    <Label htmlFor="ftsBleveEnabled" className="text-sm cursor-pointer">{t("ui.settings.ftsBleveEnabled")}</Label>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground ml-6">{t("ui.settings.ftsBleveEnabledDesc")}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox id="ftsBleveStoreRaw" checked={config.ftsBleveStoreRaw} onCheckedChange={(checked) => updateConfig({ ftsBleveStoreRaw: !!checked })} />
+                                                    <Label htmlFor="ftsBleveStoreRaw" className="text-sm cursor-pointer">{t("ui.settings.ftsBleveStoreRaw")}</Label>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground ml-6">{t("ui.settings.ftsBleveStoreRawDesc")}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <Button onClick={handleSaveConfig} disabled={saving} className="rounded-xl">
+                                            {saving ? (
+                                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("ui.auth.submitting")}</>
+                                            ) : (
+                                                <><Save className="h-4 w-4 mr-2" />{t("ui.settings.saveSettings")}</>
+                                            )}
+                                        </Button>
+                                    </div>
                                 </TabsContent>
                             </div>
                         </Tabs>
