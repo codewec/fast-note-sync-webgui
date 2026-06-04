@@ -1,5 +1,5 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog";
-import { GitBranch, UserPlus, HardDrive, Trash2, Clock, Shield, Loader2, Type, Lock, Save, HelpCircle, Github, Send, RefreshCw, Cpu, Download, Globe, Database, ChevronLeft, ChevronRight, SlidersHorizontal, BookOpen, Share2, Zap, Router, Eye, EyeOff } from "lucide-react";
+import { GitBranch, UserPlus, HardDrive, Trash2, Clock, Shield, Loader2, Type, Lock, Save, HelpCircle, Github, Send, RefreshCw, Cpu, Download, Globe, Database, ChevronLeft, ChevronRight, SlidersHorizontal, BookOpen, Share2, Zap, Router, Eye, EyeOff, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { addCacheBuster } from "@/lib/utils/cache-buster";
@@ -37,12 +37,9 @@ interface SystemConfig {
     adminUid: number
     pullSource: string
     pullReleaseChannel: string
-}
-
-interface NgrokConfig {
-    enabled: boolean
-    authToken: string
-    domain: string
+    webguiLoginTokenExpiry: string
+    webguiLoginTokenBindIp: boolean
+    customResponseHeaders?: Record<string, string>
 }
 
 interface CloudflareConfig {
@@ -70,11 +67,9 @@ interface UserDatabaseConfig {
 export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }: { onBack?: () => void, isDashboard?: boolean, isAdmin?: boolean }) {
     const { t } = useTranslation()
     const [config, setConfig] = useState<SystemConfig | null>(null)
-    const [ngrokConfig, setNgrokConfig] = useState<NgrokConfig | null>(null)
     const [cloudflareConfig, setCloudflareConfig] = useState<CloudflareConfig | null>(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
-    const [savingNgrok, setSavingNgrok] = useState(false)
     const [savingCloudflare, setSavingCloudflare] = useState(false)
     const [isRestarting, setIsRestarting] = useState(false)
     const [isGCing, setIsGCing] = useState(false)
@@ -91,6 +86,22 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
     const [hasTestedUserDb, setHasTestedUserDb] = useState(false)
     const [showDbPassword, setShowDbPassword] = useState(false)
     const [activeTab, setActiveTab] = useState("font")
+    const [headersList, setHeadersList] = useState<{ id: string; key: string; value: string }[]>([])
+
+    const addHeaderRow = () => {
+        setHeadersList(prev => [
+            ...prev,
+            { id: `header-${Date.now()}-${Math.random()}`, key: "", value: "" }
+        ])
+    }
+
+    const removeHeaderRow = (id: string) => {
+        setHeadersList(prev => prev.filter(item => item.id !== id))
+    }
+
+    const updateHeaderRow = (id: string, key: string, value: string) => {
+        setHeadersList(prev => prev.map(item => item.id === id ? { ...item, key, value } : item))
+    }
 
     const token = localStorage.getItem("token")
 
@@ -113,9 +124,6 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
         setConfig(prev => prev ? { ...prev, ...updates } : null)
     }, [])
 
-    const updateNgrokConfig = useCallback((updates: Partial<NgrokConfig>) => {
-        setNgrokConfig(prev => prev ? { ...prev, ...updates } : null)
-    }, [])
 
     const updateCloudflareConfig = useCallback((updates: Partial<CloudflareConfig>) => {
         setCloudflareConfig(prev => prev ? { ...prev, ...updates } : null)
@@ -143,16 +151,31 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                 return
             }
         }
+        // Convert headersList back to customResponseHeaders
+        const customResponseHeaders: Record<string, string> = {}
+        for (const item of headersList) {
+            const trimmedKey = item.key.trim()
+            if (trimmedKey) {
+                customResponseHeaders[trimmedKey] = item.value
+            }
+        }
+        
+        const configToSave = {
+            ...config,
+            customResponseHeaders
+        }
+
         setSaving(true)
         try {
             const response = await fetch(addCacheBuster(env.API_URL + "/api/admin/config"), {
                 method: "POST",
                 headers: buildApiHeaders({ token }),
-                body: JSON.stringify(config),
+                body: JSON.stringify(configToSave),
             })
             const res = await response.json()
             if (res.code > 0 && res.code < 200 && res.status !== false) {
                 toast.success(t("ui.settings.saveSuccess"))
+                setConfig(prev => prev ? { ...prev, customResponseHeaders } : null)
             } else {
                 toast.error(`${res.message || t("ui.settings.saveFailed")}${res.details ? `\n${res.details}` : ""}`)
             }
@@ -163,31 +186,10 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
         }
     }
 
-    const handleSaveNgrok = async () => {
-        if (!ngrokConfig) return
-        setSavingNgrok(true)
-        try {
-            const response = await fetch(addCacheBuster(env.API_URL + "/api/admin/config/ngrok"), {
-                method: "POST",
-                headers: buildApiHeaders({ token }),
-                body: JSON.stringify(ngrokConfig),
-            })
-            const res = await response.json()
-            if (res.code > 0 && res.code < 200 && res.status !== false) {
-                toast.success(t("ui.settings.saveSuccess"))
-            } else {
-                toast.error(`${res.message || t("ui.settings.saveFailed")}${res.details ? `\n${res.details}` : ""}`)
-            }
-        } catch {
-            toast.error(t("ui.settings.saveFailed"))
-        } finally {
-            setSavingNgrok(false)
-        }
-    }
 
     const handleSaveCloudflare = async () => {
         if (!cloudflareConfig) return
-        if (!hasTestedCloudflared) {
+        if (cloudflareConfig.enabled && !hasTestedCloudflared) {
             toast.error(t("ui.settings.cloudflaredTestRequired"))
             return
         }
@@ -355,18 +357,16 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
 
             if (isActive) setLoading(true)
             try {
-                const [configResponse, ngrokResponse, cloudflareResponse, userDbResponse] = await Promise.all([
+                const [configResponse, cloudflareResponse, userDbResponse] = await Promise.all([
                     fetch(addCacheBuster(env.API_URL + "/api/admin/config"), { headers: buildApiHeaders({ token, includeDomain: false, includeContentType: false }) }),
-                    fetch(addCacheBuster(env.API_URL + "/api/admin/config/ngrok"), { headers: buildApiHeaders({ token, includeDomain: false, includeContentType: false }) }),
                     fetch(addCacheBuster(env.API_URL + "/api/admin/config/cloudflare"), { headers: buildApiHeaders({ token, includeDomain: false, includeContentType: false }) }),
                     fetch(addCacheBuster(env.API_URL + "/api/admin/config/user_database"), { headers: buildApiHeaders({ token, includeDomain: false, includeContentType: false }) })
                 ])
 
                 if (!isActive) return
 
-                const [configRes, ngrokRes, cloudflareRes, userDbRes] = await Promise.all([
+                const [configRes, cloudflareRes, userDbRes] = await Promise.all([
                     configResponse.json(),
-                    ngrokResponse.json(),
                     cloudflareResponse.json(),
                     userDbResponse.json()
                 ])
@@ -375,17 +375,22 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
 
                 if (configRes.code > 0 && configRes.code < 200 && configRes.status !== false) {
                     setConfig(configRes.data)
+                    const initialHeaders = Object.entries(configRes.data.customResponseHeaders || {}).map(([k, v], idx) => ({
+                        id: `header-${idx}-${Date.now()}`,
+                        key: k,
+                        value: v as string
+                    }))
+                    setHeadersList(initialHeaders)
                 } else {
                     toast.error(configRes.message || t("ui.common.error"))
                     if (!config) onBack?.()
                 }
 
-                if (ngrokRes.code > 0 && ngrokRes.code < 200 && ngrokRes.status !== false) {
-                    setNgrokConfig(ngrokRes.data)
-                }
-
                 if (cloudflareRes.code > 0 && cloudflareRes.code < 200 && cloudflareRes.status !== false) {
                     setCloudflareConfig(cloudflareRes.data)
+                    if (cloudflareRes.data.enabled) {
+                        setHasTestedCloudflared(true)
+                    }
                 }
 
                 if (userDbRes.code > 0 && userDbRes.code < 200 && userDbRes.status !== false) {
@@ -729,6 +734,52 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                         <Input value={config.fontSet} onChange={(e) => updateConfig({ fontSet: e.target.value })} placeholder="e.g. /static/fonts/font.css" className="rounded-xl" />
                                         <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.fontSetDesc") }} />
                                     </div>
+                                    <div className="border-t border-border" />
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
+                                            <span className="text-sm font-medium">{t("ui.settings.customResponseHeaders")}</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {headersList.map((item) => (
+                                                <div key={item.id} className="flex gap-2 items-center animate-in fade-in duration-200">
+                                                    <Input
+                                                        value={item.key}
+                                                        onChange={(e) => updateHeaderRow(item.id, e.target.value, item.value)}
+                                                        placeholder={t("ui.settings.headerNamePlaceholder")}
+                                                        className="rounded-xl flex-1"
+                                                    />
+                                                    <span className="text-muted-foreground">:</span>
+                                                    <Input
+                                                        value={item.value}
+                                                        onChange={(e) => updateHeaderRow(item.id, item.key, e.target.value)}
+                                                        placeholder={t("ui.settings.headerValuePlaceholder")}
+                                                        className="rounded-xl flex-1"
+                                                    />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        type="button"
+                                                        onClick={() => removeHeaderRow(item.id)}
+                                                        className="rounded-xl text-destructive hover:bg-destructive/10 h-10 w-10 shrink-0"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                type="button"
+                                                onClick={addHeaderRow}
+                                                className="rounded-xl mt-1"
+                                            >
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                {t("ui.settings.addHeader")}
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.customResponseHeadersDesc") }} />
+                                    </div>
                                     <div className="pt-2">
                                         <Button onClick={handleSaveConfig} disabled={saving} className="rounded-xl">
                                             {saving ? (
@@ -825,12 +876,33 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                     <div className="border-t border-border" />
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-3">
+                                            <Clock className="h-5 w-5 text-muted-foreground" />
+                                            <span className="text-sm font-medium">{t("ui.settings.webguiLoginTokenExpiry")}</span>
+                                        </div>
+                                        <Input value={config.webguiLoginTokenExpiry} onChange={(e) => updateConfig({ webguiLoginTokenExpiry: e.target.value })} placeholder="e.g. 7d, 24h, 30m" className="rounded-xl" />
+                                        <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.webguiLoginTokenExpiryDesc") }} />
+                                    </div>
+                                    <div className="border-t border-border" />
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <Shield className="h-5 w-5 text-muted-foreground" />
+                                            <span className="text-sm font-medium">{t("ui.settings.webguiLoginTokenBindIp")}</span>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox id="webguiLoginTokenBindIp" checked={config.webguiLoginTokenBindIp} onCheckedChange={(checked) => updateConfig({ webguiLoginTokenBindIp: !!checked })} />
+                                            <Label htmlFor="webguiLoginTokenBindIp" className="text-sm cursor-pointer">{t("ui.common.isEnabled")}</Label>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.webguiLoginTokenBindIpDesc") }} />
+                                    </div>
+                                    <div className="border-t border-border" />
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
                                             <UserPlus className="h-5 w-5 text-muted-foreground" />
                                             <span className="text-sm font-medium">{t("ui.settings.registerIsEnable")}</span>
                                         </div>
                                         <div className="flex items-center space-x-2">
                                             <Checkbox id="registerIsEnable" checked={config.registerIsEnable} onCheckedChange={(checked) => updateConfig({ registerIsEnable: !!checked })} />
-                                            <Label htmlFor="registerIsEnable" className="text-sm cursor-pointer">{t("ui.settings.allowRegister")}</Label>
+                                            <Label htmlFor="registerIsEnable" className="text-sm cursor-pointer">{t("ui.common.isEnabled")}</Label>
                                         </div>
                                         <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.registerIsEnableDesc") }} />
                                     </div>
@@ -912,13 +984,11 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                                         </SelectTrigger>
                                                         <SelectContent className="rounded-xl">
                                                             <SelectItem value="sqlite">{t("ui.settings.databaseType.sqlite")}</SelectItem>
-                                                            <SelectItem value="mysql">{t("ui.settings.databaseType.mysql")}</SelectItem>
                                                             <SelectItem value="postgres">{t("ui.settings.databaseType.postgres")}</SelectItem>
                                                         </SelectContent>
                                                     </Select>
-                                                    {userDbConfig.type === 'mysql' && <p className="text-xs text-amber-500 font-medium">{t("ui.settings.mysqlPermissionWarning")}</p>}
                                                 </div>
-                                                {(userDbConfig.type === 'mysql' || userDbConfig.type === 'postgres') && (
+                                                {userDbConfig.type === 'postgres' && (
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300 border-t border-border pt-4">
                                                         <div className="space-y-2">
                                                             <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.databaseHost")}</Label>
@@ -926,7 +996,7 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.databasePort")}</Label>
-                                                            <Input type="number" value={userDbConfig.port} onChange={(e) => updateUserDbConfig({ port: parseInt(e.target.value) || (userDbConfig.type === 'mysql' ? 3306 : 5432) })} placeholder={userDbConfig.type === 'mysql' ? "3306" : "5432"} className="rounded-xl" />
+                                                            <Input type="number" value={userDbConfig.port} onChange={(e) => updateUserDbConfig({ port: parseInt(e.target.value) || 5432 })} placeholder="5432" className="rounded-xl" />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.databaseUser")}</Label>
@@ -1036,41 +1106,7 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                         </h2>
                                         <p className="text-sm text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.tunnelGatewayDesc") }} />
                                     </div>
-                                    {ngrokConfig && (
-                                        <div className="space-y-4">
-                                            <div className="space-y-1">
-                                                <h3 className="text-md font-semibold text-primary">Ngrok</h3>
-                                                <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.ngrokDesc") }} />
-                                            </div>
-                                            <div className="space-y-3 pl-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex items-center space-x-2">
-                                                        <Checkbox id="ngrokEnabled" checked={ngrokConfig.enabled} onCheckedChange={(checked) => updateNgrokConfig({ enabled: !!checked })} />
-                                                        <Label htmlFor="ngrokEnabled" className="text-sm cursor-pointer">{t("ui.common.isEnabled")}</Label>
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Label className="text-sm font-medium">Token</Label>
-                                                    <Input value={ngrokConfig.authToken} onChange={(e) => updateNgrokConfig({ authToken: e.target.value })} placeholder="e.g. 2Rk9..." className="rounded-xl" />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Label className="text-sm font-medium">{t("ui.settings.customDomain")}</Label>
-                                                    <Input value={ngrokConfig.domain} onChange={(e) => updateNgrokConfig({ domain: e.target.value })} placeholder="e.g. static.yourdomain.com" className="rounded-xl" />
-                                                    <p className="text-xs text-muted-foreground pt-1">{t("ui.settings.customDomainDesc")}</p>
-                                                </div>
-                                                <div className="pt-2">
-                                                    <Button onClick={handleSaveNgrok} disabled={savingNgrok} className="rounded-xl">
-                                                        {savingNgrok ? (
-                                                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("ui.auth.submitting")}</>
-                                                        ) : (
-                                                            <><Save className="h-4 w-4 mr-2" />{t("ui.settings.saveNgrok")}</>
-                                                        )}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {ngrokConfig && cloudflareConfig && <div className="border-t border-border" />}
+
                                     {cloudflareConfig && (
                                         <div className="space-y-4">
                                             <div className="space-y-1">
