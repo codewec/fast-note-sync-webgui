@@ -13,9 +13,15 @@ export function useAuth() {
   const login = async (data: LoginFormData) => {
     setIsLoading(true)
     try {
+      const storedTokenId = localStorage.getItem("tokenId")
+      const tokenId = storedTokenId ? parseInt(storedTokenId, 10) : undefined
+
       const response = await fetch(addCacheBuster(env.API_URL + "/api/user/login"), {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          tokenId: (tokenId && !isNaN(tokenId)) ? tokenId : undefined,
+        }),
         headers: buildApiHeaders({ token: null }),
       })
 
@@ -30,6 +36,9 @@ export function useAuth() {
         localStorage.setItem("uid", res.data.uid)
         localStorage.setItem("avatar", res.data.avatar)
         localStorage.setItem("email", res.data.email)
+        if (res.data.tokenId) {
+          localStorage.setItem("tokenId", String(res.data.tokenId))
+        }
         return { success: true, message: res.data.message }
       } else {
         const errorMsg = res.details ? `${res.message}: ${res.details}` : res.message
@@ -63,6 +72,9 @@ export function useAuth() {
         localStorage.setItem("uid", res.data.uid)
         localStorage.setItem("avatar", res.data.avatar)
         localStorage.setItem("email", res.data.email)
+        if (res.data.tokenId) {
+          localStorage.setItem("tokenId", String(res.data.tokenId))
+        }
         return { success: true }
       } else {
         const errorMsg = res.details ? `${res.message}: ${res.details}` : res.message
