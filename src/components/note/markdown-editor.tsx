@@ -1073,6 +1073,15 @@ const markdownComponents: Components = {
         // 与 Obsidian 阅读视图一致：`[text](video.mp4)` 是可点击链接、不嵌入
         // 播放器。嵌入由 `![[ ]]`、`![](...)` 或原生 <video>/<audio> 完成，
         // 它们都在 transformObsidianSyntax 上游被处理。
+        // Empty alt `[](path.md)` fallback: display decoded filename as anchor text.
+        const hasChildren = children != null && children !== false;
+        let displayChildren = children;
+        if (!hasChildren && href) {
+            let decoded: string;
+            try { decoded = decodeURIComponent(href); } catch { decoded = href; }
+            const filename = decoded.replace(/\.md$/i, '').split('/').pop() || decoded;
+            displayChildren = filename;
+        }
         return (
             <a
                 href={href}
@@ -1081,7 +1090,7 @@ const markdownComponents: Components = {
                 className={cn("text-primary underline underline-offset-4 hover:opacity-80", className)}
                 {...props}
             >
-                {children}
+                {displayChildren}
             </a>
         );
     },
