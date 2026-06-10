@@ -180,6 +180,9 @@ export function NoteManager({
             });
 
             if (match) {
+                const folder = match.path.includes('/') ? match.path.substring(0, match.path.lastIndexOf('/')) : '';
+                setCurrentPath(folder);
+                setCurrentPathHash(match.pathHash || '');
                 handleSelectNote(match, true);
             } else {
                 toast.info(t("ui.note.wikiLinkNotFound", { target: resolvedTarget }));
@@ -209,11 +212,14 @@ export function NoteManager({
                     return notePath === resolvedTarget || notePath.endsWith('/' + resolvedTarget);
                 });
                 if (match) {
+                    const folder = match.path.includes('/') ? match.path.substring(0, match.path.lastIndexOf('/')) : '';
+                    setCurrentPath(folder);
+                    setCurrentPathHash(match.pathHash || '');
                     handleSelectNote(match, true);
                 }
             });
         }
-    }, [vault, handleNoteList, handleSelectNote]);
+    }, [vault, handleNoteList, handleSelectNote, setCurrentPath, setCurrentPathHash]);
 
     const handleCreateNote = () => {
         setSelectedNote(undefined);
@@ -224,6 +230,7 @@ export function NoteManager({
     const handleBack = () => {
         setView("list");
         setSelectedNote(undefined);
+        setPage(1);
     };
 
     const handleNavigateToFolder = (folderPath: string) => {
