@@ -60,6 +60,7 @@ interface MarkdownEditorProps {
     initialMode?: "edit" | "preview";
     ariaLabel?: string;
     onWikiLinkClick?: (target: string) => void;
+    notePath?: string;
     fullWidth?: boolean;
     autoHeight?: boolean;
     shareId?: string;
@@ -1115,12 +1116,23 @@ const markdownComponents: Components = {
 
 // ─── 共用渲染器 ─────────────────────────────────────────────
 
-export const MarkdownRenderer = memo(function MarkdownRenderer({ content }: { content: string }) {
+export const MarkdownRenderer = memo(function MarkdownRenderer({
+    content,
+    components: additionalComponents,
+}: {
+    content: string;
+    components?: Components;
+}) {
+    const mergedComponents = useMemo(() => ({
+        ...markdownComponents,
+        ...additionalComponents,
+    }), [additionalComponents]);
+
     return (
         <ReactMarkdown
             remarkPlugins={REMARK_PLUGINS}
             rehypePlugins={REHYPE_PLUGINS}
-            components={markdownComponents}
+            components={mergedComponents}
             allowedElements={undefined}
             unwrapDisallowed
         >
@@ -1143,6 +1155,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
             initialMode = "edit",
             ariaLabel,
             onWikiLinkClick,
+            notePath,
             fullWidth = false,
             autoHeight = false,
             shareId,
@@ -1160,12 +1173,30 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
         const mode = initialMode;
 
         const handlePreviewClick = useCallback((e: React.MouseEvent) => {
-            const el = (e.target as HTMLElement).closest('.obsidian-wiki-link');
-            if (!el) return;
-            e.preventDefault();
-            const target = el.getAttribute('title');
-            if (target && onWikiLinkClick) {
-                onWikiLinkClick(target);
+            const wikiEl = (e.target as HTMLElement).closest('.obsidian-wiki-link');
+            if (wikiEl) {
+                e.preventDefault();
+                const target = wikiEl.getAttribute('title');
+                if (target && onWikiLinkClick) {
+                    onWikiLinkClick(target);
+                }
+                return;
+            }
+            const anchorEl = (e.target as HTMLElement).closest('a[href]');
+            if (anchorEl) {
+                const rawHref = anchorEl.getAttribute('href') || '';
+                if (/\.md$/i.test(rawHref) && !/^https?:\/\//i.test(rawHref)) {
+                    e.preventDefault();
+                    let decoded: string;
+                    try {
+                        decoded = decodeURIComponent(rawHref);
+                    } catch {
+                        decoded = rawHref;
+                    }
+                    if (onWikiLinkClick) {
+                        onWikiLinkClick(decoded);
+                    }
+                }
             }
         }, [onWikiLinkClick]);
 
@@ -1302,6 +1333,65 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
             toast.info(t("ui.note.exportPdfPlanned"));
         }, [t]);
 
+        const previewComponents = useMemo<Components>(() => {
+            return {
+                a: ({ node: _node, href, children, className, ...props }) => {
+                    const hasChildren = children != null && children !== false;
+                    let displayChildren = children;
+                    if (!hasChildren && href) {
+                        let decoded: string;
+                        try { decoded = decodeURIComponent(href); } catch { decoded = href; }
+                        const filename = decoded.replace(/\.md$/i, '').split('/').pop() || decoded;
+                        displayChildren = filename;
+                    }
+
+                    if (href && /\.md$/i.test(href) && !/^https?:\/\//i.test(href)) {
+                        let decoded: string;
+                        try { decoded = decodeURIComponent(href); } catch { decoded = href; }
+
+                        const searchParams = new URLSearchParams(window.location.search);
+                        searchParams.set('notes', '');
+                        if (vault) searchParams.set('vault', vault);
+                        searchParams.set('notePath', decoded);
+                        if (notePath) searchParams.set('fromNotePath', notePath);
+                        const spaUrl = `?${searchParams.toString()}`;
+
+                        return (
+                            <a
+                                href={spaUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={cn("text-primary underline underline-offset-4 hover:opacity-80", className)}
+                                onClick={(e) => {
+                                    if (!e.ctrlKey && !e.metaKey && e.button === 0) {
+                                        e.preventDefault();
+                                        if (onWikiLinkClick) {
+                                            onWikiLinkClick(decoded);
+                                        }
+                                    }
+                                }}
+                                {...props}
+                            >
+                                {displayChildren}
+                            </a>
+                        );
+                    }
+
+                    return (
+                        <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={cn("text-primary underline underline-offset-4 hover:opacity-80", className)}
+                            {...props}
+                        >
+                            {displayChildren}
+                        </a>
+                    );
+                },
+            };
+        }, [vault, onWikiLinkClick, notePath]);
+
         useImperativeHandle(
             ref,
             () => ({
@@ -1381,7 +1471,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
                             )}
                         </div>
 
-                        <MarkdownRenderer content={previewMarkdown} />
+                        <MarkdownRenderer content={previewMarkdown} components={previewComponents} />
                     </article>
                 </div>
             );

@@ -715,6 +715,7 @@ export function NoteEditor({
                                     initialMode={splitReversed ? "preview" : "edit"}
                                     vault={vault}
                                     fileLinks={originalNote?.fileLinks}
+                                    notePath={path}
                                     onWikiLinkClick={(target) => onWikiLinkClick?.(target, path)}
                                 />
                             </Suspense>
@@ -731,6 +732,7 @@ export function NoteEditor({
                                     initialMode={splitReversed ? "edit" : "preview"}
                                     vault={vault}
                                     fileLinks={originalNote?.fileLinks}
+                                    notePath={path}
                                     onWikiLinkClick={(target) => onWikiLinkClick?.(target, path)}
                                 />
                             </Suspense>
@@ -750,6 +752,7 @@ export function NoteEditor({
                                 vault={vault}
                                 fileLinks={originalNote?.fileLinks}
                                 initialMode={isPreviewMode ? "preview" : "edit"}
+                                notePath={path}
                                 onWikiLinkClick={(target) => onWikiLinkClick?.(target, path)}
                             />
                         </Suspense>

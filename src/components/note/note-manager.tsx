@@ -187,6 +187,34 @@ export function NoteManager({
         });
     }, [vault, handleNoteList, handleSelectNote, t]);
 
+    // 从 URL 参数中读取 notePath（新标签页打开 MD 链接时）
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const notePathParam = params.get('notePath');
+        const fromNotePath = params.get('fromNotePath') || '';
+
+        if (notePathParam && vault) {
+            params.delete('notePath');
+            params.delete('fromNotePath');
+            const search = params.toString().replace(/=(?=&|$)/g, '');
+            window.history.replaceState(null, '', window.location.pathname + (search ? `?${search}` : ''));
+
+            const resolvedTarget = resolveNotePath(notePathParam, fromNotePath);
+            if (!resolvedTarget) return;
+
+            handleNoteList(vault, 1, 50, resolvedTarget, false, "path", false, "mtime", "desc", (data) => {
+                if (!data?.list?.length) return;
+                const match = data.list.find(n => {
+                    const notePath = n.path.replace(/\.md$/i, '');
+                    return notePath === resolvedTarget || notePath.endsWith('/' + resolvedTarget);
+                });
+                if (match) {
+                    handleSelectNote(match, true);
+                }
+            });
+        }
+    }, [vault, handleNoteList, handleSelectNote]);
+
     const handleCreateNote = () => {
         setSelectedNote(undefined);
         setInitialPreviewMode(false);
