@@ -45,7 +45,7 @@ interface NoteEditorProps {
     onToggleMaximize?: () => void;
     isRecycle?: boolean;
     initialPreviewMode?: boolean;
-    onWikiLinkClick?: (target: string) => void;
+    onWikiLinkClick?: (target: string, currentNotePath?: string) => void;
     defaultFolderPath?: string;
 }
 
@@ -715,7 +715,7 @@ export function NoteEditor({
                                     initialMode={splitReversed ? "preview" : "edit"}
                                     vault={vault}
                                     fileLinks={originalNote?.fileLinks}
-                                    onWikiLinkClick={onWikiLinkClick}
+                                    onWikiLinkClick={(target) => onWikiLinkClick?.(target, path)}
                                 />
                             </Suspense>
                         </div>
@@ -731,7 +731,7 @@ export function NoteEditor({
                                     initialMode={splitReversed ? "edit" : "preview"}
                                     vault={vault}
                                     fileLinks={originalNote?.fileLinks}
-                                    onWikiLinkClick={onWikiLinkClick}
+                                    onWikiLinkClick={(target) => onWikiLinkClick?.(target, path)}
                                 />
                             </Suspense>
                         </div>
@@ -750,7 +750,7 @@ export function NoteEditor({
                                 vault={vault}
                                 fileLinks={originalNote?.fileLinks}
                                 initialMode={isPreviewMode ? "preview" : "edit"}
-                                onWikiLinkClick={onWikiLinkClick}
+                                onWikiLinkClick={(target) => onWikiLinkClick?.(target, path)}
                             />
                         </Suspense>
                     </div>

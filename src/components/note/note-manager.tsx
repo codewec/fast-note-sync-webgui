@@ -19,6 +19,29 @@ import { NoteList } from "./note-list";
 import { useAppStore } from "@/stores/app-store";
 
 
+// 工具函数：将笔记内的相对路径解析为 vault 绝对路径（纯函数，无 hook 依赖）
+function resolveNotePath(target: string, currentNotePath?: string): string {
+    let normalized = target.replace(/#.*$/, '').replace(/\.md$/i, '').trim();
+    if (!normalized) return '';
+
+    if (normalized.startsWith('./')) {
+        normalized = normalized.slice(2);
+    }
+    if (normalized.startsWith('../') && currentNotePath) {
+        const dir = currentNotePath.includes('/')
+            ? currentNotePath.substring(0, currentNotePath.lastIndexOf('/'))
+            : '';
+        const parts = dir ? dir.split('/') : [];
+        while (normalized.startsWith('../')) {
+            if (parts.length > 0) parts.pop();
+            normalized = normalized.slice(3);
+        }
+        normalized = [...parts, normalized].filter(Boolean).join('/');
+    }
+
+    return normalized;
+}
+
 interface NoteManagerProps {
     vault: string;
     onVaultChange?: (vault: string) => void;
@@ -137,29 +160,29 @@ export function NoteManager({
         setView("editor");
     }, []);
 
-    const handleWikiLinkClick = useCallback((target: string) => {
-        // 1. 去锚点、去 .md
-        const normalizedTarget = target.replace(/#.*$/, '').replace(/\.md$/i, '').trim();
-        if (!normalizedTarget) return;
+    const handleWikiLinkClick = useCallback((target: string, currentNotePath?: string) => {
+        // 1. 解析路径（去锚点、去 .md、解析相对路径）
+        const resolvedTarget = resolveNotePath(target, currentNotePath);
+        if (!resolvedTarget) return;
 
         // 2. API 搜索
-        handleNoteList(vault, 1, 50, normalizedTarget, false, "path", false, "mtime", "desc", (data) => {
+        handleNoteList(vault, 1, 50, resolvedTarget, false, "path", false, "mtime", "desc", (data) => {
             if (!data?.list?.length) {
-                toast.info(t("ui.note.wikiLinkNotFound", { target: normalizedTarget }));
+                toast.info(t("ui.note.wikiLinkNotFound", { target: resolvedTarget }));
                 return;
             }
 
             // 3. 精确匹配
             const match = data.list.find(n => {
                 const notePath = n.path.replace(/\.md$/i, '');
-                return notePath === normalizedTarget
-                    || notePath.endsWith('/' + normalizedTarget);
+                return notePath === resolvedTarget
+                    || notePath.endsWith('/' + resolvedTarget);
             });
 
             if (match) {
                 handleSelectNote(match, true);
             } else {
-                toast.info(t("ui.note.wikiLinkNotFound", { target: normalizedTarget }));
+                toast.info(t("ui.note.wikiLinkNotFound", { target: resolvedTarget }));
             }
         });
     }, [vault, handleNoteList, handleSelectNote, t]);
