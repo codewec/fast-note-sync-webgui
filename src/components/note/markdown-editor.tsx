@@ -5,6 +5,7 @@ import { EditorView, placeholder as cmPlaceholder } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
+import { MermaidBlock } from "./mermaid-block";
 import { renderToStaticMarkup } from "react-dom/server";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
@@ -1100,6 +1101,10 @@ const markdownComponents: Components = {
     code: ({ node: _node, className, children, ...props }) => {
         const value = String(children);
         const isInline = !className && !value.includes("\n");
+
+        if (className && className.split(" ").includes("language-mermaid")) {
+            return <MermaidBlock code={value.replace(/\n$/, "")} />;
+        }
 
         if (isInline) {
             return (
