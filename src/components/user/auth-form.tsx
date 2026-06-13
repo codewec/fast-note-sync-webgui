@@ -3,9 +3,12 @@ import "../../styles/auth.css";
 import { createLoginSchema, createRegisterSchema, type LoginFormData, type RegisterFormData } from "@/lib/validations/user-schema";
 import { AnimatedBackground } from "@/components/user/animated-background";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { normalizeOIDCProviders, type OIDCProvider } from "@/components/user/auth-oidc";
+import { addCacheBuster } from "@/lib/utils/cache-buster";
+import { buildApiHeaders } from "@/lib/utils/api-headers";
 import { motion, AnimatePresence, type Variants } from "motion/react";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
-import { Github, Wifi } from "lucide-react";
+import { Github, KeyRound, Wifi } from "lucide-react";
 import { useTheme } from "@/components/context/theme-context";
 import { useAuth } from "@/components/api-handle/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +16,8 @@ import { toast } from "@/components/common/Toast";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import env from "@/env.ts";
 
 
 interface AuthFormProps {
@@ -43,6 +47,7 @@ export function AuthForm({ onSuccess, registerIsEnable = true }: AuthFormProps) 
   const { isLoading, login, registerUser } = useAuth()
   const { resolvedTheme } = useTheme()
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
+  const [oidcProviders, setOIDCProviders] = useState<OIDCProvider[]>([])
 
   const loginSchema = createLoginSchema(t)
   const registerSchema = createRegisterSchema(t)
@@ -58,6 +63,30 @@ export function AuthForm({ onSuccess, registerIsEnable = true }: AuthFormProps) 
   const onSoft = () => {
     window.open("https://github.com/haierkeys/fast-note-sync-service", "_blank", "noopener,noreferrer")
   }
+
+  useEffect(() => {
+    let cancelled = false
+    const loadOIDCConfig = async () => {
+      try {
+        const response = await fetch(addCacheBuster(env.API_URL + "/api/user/auth/oidc/config"), {
+          headers: buildApiHeaders({ token: null, includeContentType: false }),
+        })
+        if (!response.ok) return
+        const res = await response.json()
+        if (!cancelled && res.code < 100 && res.code > 0) {
+          setOIDCProviders(normalizeOIDCProviders(res.data))
+        }
+      } catch (_error) {
+        if (!cancelled) {
+          setOIDCProviders([])
+        }
+      }
+    }
+    loadOIDCConfig()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleLoginSubmit = async (data: LoginFormData) => {
     const result = await login(data)
@@ -75,6 +104,12 @@ export function AuthForm({ onSuccess, registerIsEnable = true }: AuthFormProps) 
     } else {
       toast.error(result.error!)
     }
+  }
+
+  const handleOIDCLogin = (provider: OIDCProvider) => {
+    const apiUrl = env.API_URL.endsWith("/") ? env.API_URL.slice(0, -1) : env.API_URL
+    const redirectTo = window.location.pathname + window.location.search + window.location.hash
+    window.location.href = `${apiUrl}${provider.startUrl}?redirectTo=${encodeURIComponent(redirectTo)}`
   }
 
   const toggleTab = (tab: 'login' | 'register') => {
@@ -298,6 +333,23 @@ export function AuthForm({ onSuccess, registerIsEnable = true }: AuthFormProps) 
               </motion.form>
             )}
           </AnimatePresence>
+
+          {activeTab === 'login' && oidcProviders.length > 0 && (
+            <div className="auth-oidc-section">
+              <div className="auth-divider" />
+              {oidcProviders.map((provider) => (
+                <button
+                  key={provider.id}
+                  type="button"
+                  onClick={() => handleOIDCLogin(provider)}
+                  className="auth-button-secondary"
+                >
+                  <KeyRound size={16} />
+                  <span>{provider.displayName}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
         </div>
 
