@@ -22,6 +22,7 @@ import {
 
 import { toast } from "@/components/common/Toast";
 import { useTheme } from "@/components/context/theme-context";
+import { useToc } from "@/components/context/toc-context";
 import { cn } from "@/lib/utils";
 import { getBrowserLang } from "@/i18n/utils";
 import env from "@/env.ts";
@@ -124,6 +125,67 @@ const CALLOUT_STYLES: Record<string, { border: string; bg: string; text: string;
     quote:    { border: "border-gray-400",   bg: "bg-gray-50 dark:bg-gray-950/30",    text: "text-gray-400",   icon: "quote" },
     cite:     { border: "border-gray-400",   bg: "bg-gray-50 dark:bg-gray-950/30",    text: "text-gray-400",   icon: "quote" },
 };
+
+/** 已使用的标题 ID 集合，用于去重 */
+const usedHeadingIds = new Set<string>();
+
+/**
+ * 生成标题的唯一 ID
+ * 优先使用文本内容生成 kebab-case ID
+ * 如果 ID 已存在，则添加数字后缀确保唯一性
+ *
+ * @param text - 标题文本内容
+ * @returns 唯一的 ID 字符串
+ */
+export function generateHeadingId(text: string): string {
+    // 生成基础 ID：转小写，替换空格和特殊字符为连字符
+    let baseId = text
+        .toLowerCase()
+        .replace(/[^\w\u4e00-\u9fff]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    // 如果基础 ID 已存在，添加数字后缀
+    let id = baseId;
+    let counter = 1;
+    while (usedHeadingIds.has(id)) {
+        id = `${baseId}-${counter}`;
+        counter++;
+    }
+
+    usedHeadingIds.add(id);
+    return id;
+}
+
+/**
+ * 重置已使用的标题 ID 集合
+ * 应在 Markdown 内容变化时调用
+ */
+export function resetHeadingIds(): void {
+    usedHeadingIds.clear();
+}
+
+/**
+ * 从 React children 中提取纯文本内容
+ * 用于生成目录项的显示文本
+ *
+ * @param children - React children 节点
+ * @returns 提取的纯文本字符串
+ */
+function extractTextFromChildren(children: React.ReactNode): string {
+    if (typeof children === 'string') {
+        return children;
+    }
+    if (typeof children === 'number') {
+        return String(children);
+    }
+    if (Array.isArray(children)) {
+        return children.map(extractTextFromChildren).join('');
+    }
+    if (React.isValidElement(children) && children.props) {
+        return extractTextFromChildren((children.props as any).children);
+    }
+    return '';
+}
 
 const CM6_BASIC_SETUP = {
     lineNumbers: false,
@@ -959,18 +1021,58 @@ function extractCalloutInfo(children: React.ReactNode): {
     };
 }
 
+// ─── 标题注册组件 ──────────────────────────────────────────
+
+/**
+ * 创建带标题注册功能的标题组件
+ * 用于 ReactMarkdown 的自定义组件
+ *
+ * @param Tag - HTML 标签名（h1-h6）
+ * @param defaultClassName - 默认样式类名
+ * @param level - 标题层级（1-6）
+ * @returns 带注册逻辑的标题组件
+ */
+function createHeadingComponent(Tag: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6', defaultClassName: string, level: number) {
+    return function HeadingComponent({ node: _node, className, children, ...props }: any) {
+        const { registerHeading, unregisterHeading } = useToc();
+        const text = extractTextFromChildren(children);
+        const id = generateHeadingId(text);
+
+        useEffect(() => {
+            if (!text.trim()) return;
+
+            const element = document.getElementById(id);
+            if (element) {
+                registerHeading({
+                    id,
+                    level,
+                    text: text.trim(),
+                    element,
+                });
+            }
+
+            return () => {
+                unregisterHeading(id);
+            };
+        }, [id, level, text, registerHeading, unregisterHeading]);
+
+        return React.createElement(Tag, {
+            id,
+            className: cn(defaultClassName, className),
+            ...props,
+        }, children);
+    };
+}
+
 // ─── React Markdown 自定义组件 ──────────────────────────────
 
 const markdownComponents: Components = {
-    h1: ({ node: _node, className, ...props }) => (
-        <h1 className={cn("mt-8 mb-4 text-3xl font-bold first:mt-0", className)} {...props} />
-    ),
-    h2: ({ node: _node, className, ...props }) => (
-        <h2 className={cn("mt-7 mb-3 text-2xl font-semibold first:mt-0", className)} {...props} />
-    ),
-    h3: ({ node: _node, className, ...props }) => (
-        <h3 className={cn("mt-6 mb-3 text-xl font-semibold first:mt-0", className)} {...props} />
-    ),
+    h1: createHeadingComponent('h1', "mt-8 mb-4 text-3xl font-bold first:mt-0", 1),
+    h2: createHeadingComponent('h2', "mt-7 mb-3 text-2xl font-semibold first:mt-0", 2),
+    h3: createHeadingComponent('h3', "mt-6 mb-3 text-xl font-semibold first:mt-0", 3),
+    h4: createHeadingComponent('h4', "mt-5 mb-2 text-lg font-semibold first:mt-0", 4),
+    h5: createHeadingComponent('h5', "mt-4 mb-2 text-base font-semibold first:mt-0", 5),
+    h6: createHeadingComponent('h6', "mt-4 mb-2 text-sm font-semibold first:mt-0", 6),
     p: ({ node: _node, className, ...props }) => (
         <p className={cn("my-3 leading-7 text-foreground/90", className)} {...props} />
     ),
@@ -1233,6 +1335,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
                 editorViewRef.current = null;
             };
         }, []);
+
+        // 内容变化时重置已使用的标题 ID
+        useEffect(() => {
+            resetHeadingIds();
+        }, [value]);
 
         const editorExtensions = useMemo(() => {
             const extensions = [
