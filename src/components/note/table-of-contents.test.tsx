@@ -9,7 +9,7 @@ class MockIntersectionObserver {
   observe = vi.fn();
   unobserve = vi.fn();
   disconnect = vi.fn();
-  constructor(_callback: any, _options?: any) {}
+  constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
 }
 
 beforeEach(() => {
@@ -23,7 +23,7 @@ vi.mock('motion/react', () => ({
     nav: 'nav',
     button: 'button',
   },
-  AnimatePresence: ({ children }: any) => children,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 // Helper: 创建带 Provider 的渲染
