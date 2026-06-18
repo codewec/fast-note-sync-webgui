@@ -85,10 +85,28 @@ export function useVaultHandle() {
     }
   }, [token])
 
+  const handleVaultForceDeleteItem = useCallback(async (vaultId: number, type: 'note' | 'file', id: number) => {
+    const response = await fetch(addCacheBuster(env.API_URL + "/api/vault/force-delete-item"), {
+      method: "POST",
+      body: JSON.stringify({ vaultId, type, id }),
+      headers: buildApiHeaders({ token }),
+    })
+    if (!response.ok) {
+      throw new Error("Network response was not ok")
+    }
+    const res = await response.json()
+    if (res.code < 100 && res.code > 0) {
+      toast.success(res.message)
+    } else {
+      throw new Error(res.message + (res.details ? ": " + res.details : ""))
+    }
+  }, [token])
+
   return useMemo(() => ({
     handleVaultList,
     handleVaultDelete,
     handleVaultUpdate,
     handleVaultRebuildIndex,
-  }), [handleVaultList, handleVaultDelete, handleVaultUpdate, handleVaultRebuildIndex])
+    handleVaultForceDeleteItem,
+  }), [handleVaultList, handleVaultDelete, handleVaultUpdate, handleVaultRebuildIndex, handleVaultForceDeleteItem])
 }

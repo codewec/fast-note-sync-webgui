@@ -243,6 +243,14 @@ export default {
     "ui.vault.rebuildIndexDisabledHint": "请先在【系统设置→高级设置】中启用 Bleve 全文搜索功能，才可以重建全文索引",
     "ui.vault.toolbar": "工具箱",
     "ui.vault.copyId": "复制 ID",
+    "ui.vault.forceDeleteItem": "物理删除笔记和附件",
+    "ui.vault.forceDeleteModalTitle": "物理删除笔记和附件",
+    "ui.vault.forceDeleteModalDesc": "在此输入路径关键字搜索该笔记本下的笔记和附件，并可强制从数据库和磁盘中永久删除数据。此操作不可恢复！",
+    "ui.vault.forceDeleteConfirm": "⚠️ 警告：危险操作！\n\n确定要永久物理删除“{{path}}”吗？此操作将立即从数据库和磁盘中彻底抹除该文件，且不可恢复！",
+    "ui.vault.noResults": "未找到库中匹配的笔记或附件",
+    "ui.vault.searching": "正在搜索...",
+    "ui.vault.recycleBin": "回收站",
+    "ui.vault.file": "附件",
 
     // --- ui.note ---
     "ui.note.note": "笔记",

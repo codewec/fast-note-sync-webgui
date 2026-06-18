@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
+import { VaultForceDeleteModal } from "./vault-force-delete-modal";
 
 
 interface VaultListProps {
@@ -40,6 +41,7 @@ interface SortableVaultCardProps {
   t: (key: string, options?: Record<string, unknown>) => string;
   ftsBleveEnabled?: boolean;
   onRebuildIndex: (id: string | number) => void;
+  onOpenForceDeleteModal: (vault: VaultType) => void;
 }
 
 function SortableVaultCard({
@@ -58,6 +60,7 @@ function SortableVaultCard({
   t,
   ftsBleveEnabled,
   onRebuildIndex,
+  onOpenForceDeleteModal,
 }: SortableVaultCardProps) {
   const {
     attributes,
@@ -367,6 +370,19 @@ function SortableVaultCard({
               <Copy className="h-3.5 w-3.5" />
               <span>{t("ui.vault.copyId") || "复制 ID"}</span>
             </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 w-full rounded-lg text-xs hover:bg-destructive/5 hover:text-destructive flex items-center justify-start gap-2 text-destructive/80 transition-all font-bold"
+              onClick={() => {
+                setShowToolbar(false);
+                onOpenForceDeleteModal(vault);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>{t("ui.vault.forceDeleteItem") || "强制物理删除..."}</span>
+            </Button>
           </div>
         </div>
       )}
@@ -394,8 +410,16 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments, ftsBleve
   const [loginCount, setLoginCount] = useState(0)
   const [manualCount, setManualCount] = useState(0)
 
+  const [forceDeleteModalOpen, setForceDeleteModalOpen] = useState(false)
+  const [selectedForceDeleteVault, setSelectedForceDeleteVault] = useState<VaultType | null>(null)
+
   const { handleVaultList, handleVaultDelete, handleVaultUpdate, handleVaultRebuildIndex } = useVaultHandle()
   const { openConfirmDialog } = useConfirmDialog()
+
+  const handleOpenForceDeleteModal = (vault: VaultType) => {
+    setSelectedForceDeleteVault(vault);
+    setForceDeleteModalOpen(true);
+  };
 
   const handleRebuildIndex = async (id: string | number) => {
     openConfirmDialog(t("ui.vault.rebuildIndexConfirm"), "confirm", async () => {
@@ -700,6 +724,7 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments, ftsBleve
                       t={t}
                       ftsBleveEnabled={ftsBleveEnabled}
                       onRebuildIndex={handleRebuildIndex}
+                      onOpenForceDeleteModal={handleOpenForceDeleteModal}
                     />
                   ))}
                 </div>
@@ -808,6 +833,13 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments, ftsBleve
         onOpenChange={setConfigModalOpen}
         vaultName={configVaultName}
         onSuccess={() => tokenManagerRef.current?.refresh()}
+      />
+
+      {/* 强制物理删除模态窗口 */}
+      <VaultForceDeleteModal
+        open={forceDeleteModalOpen}
+        onOpenChange={setForceDeleteModalOpen}
+        vault={selectedForceDeleteVault}
       />
     </div>
   )

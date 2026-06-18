@@ -834,7 +834,7 @@
   "ui.obsidian.copyTokenSuccess": "5b8ea456bf5a81ae78822cbae6544675",
   "ui.system.versionHistory": "079790a97cbf323fe7a3b7d2e058c78e",
   "ui.system.clickToExpand": "dec2532ca519e81606ce50d7f2441222",
-  "ui.vault.rebuildIndex": "c9d625994fdfd48365e4ff39f3658edd",
+  "ui.vault.rebuildIndex": "aa2673b3a36074ac811bd2b3f73f8ab6",
   "ui.vault.rebuildIndexConfirm": "e7efe0d632c03038f4ee6a442e8d277c",
   "ui.note.downloadMarkdown": "80526aaeeaed34a5b8f82ceed47ddcf5",
   "ui.note.deleteFolderConfirm": "1b176f1b9af57a54db432c21fd0a88ae",
@@ -920,5 +920,16 @@
   "ui.settings.ftsBleveEnabledDesc": "bdf3cbb3f8e02e431a396cfa88f7789d",
   "ui.settings.ftsBleveStoreRaw": "77182fd5d0bb6e3b69b9599e216ad7d9",
   "ui.settings.ftsBleveStoreRawDesc": "c44f3d450d46c46b3685a0b2f6d90253",
-  "ui.settings.durationFormatError": "85a56e3299f39d6aaec6bb6e198784d4"
+  "ui.settings.durationFormatError": "85a56e3299f39d6aaec6bb6e198784d4",
+  "ui.vault.rebuildIndexDisabledHint": "4e4e8bb180133f796b410c978ecd4d46",
+  "ui.vault.toolbar": "59ddf3cc5c481ff4fa090262e6747a74",
+  "ui.vault.copyId": "4b99bb1e00ce322c1f155f0540286c41",
+  "ui.vault.forceDeleteItem": "5955ae47d6fe2b4bdb514e08cd0976db",
+  "ui.vault.forceDeleteModalTitle": "60ffc7fcdbb34d9e838bc33425caeffb",
+  "ui.vault.forceDeleteModalDesc": "1fdaf21c979bcd8ef7483050935489d5",
+  "ui.vault.forceDeleteConfirm": "da5592176dabc73583d8db52fa1a7d4e",
+  "ui.vault.noResults": "ee9b3e77b69c618e800b64d1713eb99e",
+  "ui.vault.searching": "d7b688bb48e68b398afa4214ba399d84",
+  "ui.vault.recycleBin": "2896bd79f2bacd1379bfbd91a139b6ca",
+  "ui.vault.file": "c9a6ee90f5d43732e3f6cf4dcaa8493c"
 }

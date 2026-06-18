@@ -240,9 +240,17 @@ export default {
     "ui.vault.setAsDefault": "Set as Default",
     "ui.vault.rebuildIndex": "Rebuild Full-Text Index",
     "ui.vault.rebuildIndexConfirm": "Are you sure you want to rebuild the full-text search index for this vault? This operation will re-scan and index all notes.",
-    "ui.vault.rebuildIndexDisabledHint": "You need to enable Bleve full-text search to rebuild",
+    "ui.vault.rebuildIndexDisabledHint": "Please enable the Bleve full-text search feature in [System Settings → Advanced Settings] before rebuilding the full-text index.",
     "ui.vault.toolbar": "Toolbox",
     "ui.vault.copyId": "Copy ID",
+    "ui.vault.forceDeleteItem": "Permanently Delete Note Attachments",
+    "ui.vault.forceDeleteModalTitle": "Force Permanent Deletion of Note Attachments",
+    "ui.vault.forceDeleteModalDesc": "Enter a path keyword here to search for notes and attachments under this vault, and permanently delete data from both the database and disk. This action cannot be undone!",
+    "ui.vault.forceDeleteConfirm": "⚠️ Warning: Dangerous Operation!\n\nAre you sure you want to permanently and physically delete \"{{path}}\"? This action will immediately and irreversibly erase the file from both the database and disk.",
+    "ui.vault.noResults": "No matching notes or attachments found in the vault",
+    "ui.vault.searching": "Searching...",
+    "ui.vault.recycleBin": "Recycle Bin",
+    "ui.vault.file": "Attachment",
 
     // --- ui.note ---
     "ui.note.note": "Note",
