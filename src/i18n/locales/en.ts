@@ -238,8 +238,11 @@ export default {
     "ui.vault.createVaultFirst": "Please create a vault first, then manage it",
     "ui.vault.goToVaultManagement": "Go to Vault Management",
     "ui.vault.setAsDefault": "Set as Default",
-    "ui.vault.rebuildIndex": "Rebuild Full-Text Search Index",
+    "ui.vault.rebuildIndex": "Rebuild Full-Text Index",
     "ui.vault.rebuildIndexConfirm": "Are you sure you want to rebuild the full-text search index for this vault? This operation will re-scan and index all notes.",
+    "ui.vault.rebuildIndexDisabledHint": "You need to enable Bleve full-text search to rebuild",
+    "ui.vault.toolbar": "Toolbox",
+    "ui.vault.copyId": "Copy ID",
 
     // --- ui.note ---
     "ui.note.note": "Note",

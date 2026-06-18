@@ -335,9 +335,9 @@ function App() {
         return (
           <VaultList
             ftsBleveEnabled={ftsBleveEnabled}
-            onNavigateToNotes={(vaultName) => {
+            onNavigateToNotes={(vaultName, mode = "folder") => {
               setActiveVault(vaultName)
-              localStorage.setItem("noteViewMode", "folder")
+              localStorage.setItem("noteViewMode", mode)
               setModule("notes")
             }}
             onNavigateToAttachments={(vaultName) => {

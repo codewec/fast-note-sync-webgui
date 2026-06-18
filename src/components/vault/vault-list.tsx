@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Plus, Key, Globe, Monitor, Library, RefreshCw, Check, X, Search, GripVertical, FileText, Paperclip, HardDrive, Wifi, Clock, ScanText } from "lucide-react";
+import { Pencil, Trash2, Plus, Key, Globe, Monitor, Library, RefreshCw, Check, X, Search, GripVertical, FileText, Paperclip, HardDrive, Wifi, Clock, ScanText, Wrench, Copy } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, rectSortingStrategy } from "@dnd-kit/sortable";
 import { TokenManager, TokenManagerHandle } from "@/components/user/token-manager";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 
 interface VaultListProps {
-  onNavigateToNotes?: (vaultName: string) => void;
+  onNavigateToNotes?: (vaultName: string, mode?: "folder" | "flat") => void;
   onNavigateToAttachments?: (vaultName: string) => void;
   ftsBleveEnabled?: boolean;
 }
@@ -34,7 +34,7 @@ interface SortableVaultCardProps {
   cancelEdit: () => void;
   handleDelete: (id: string) => void;
   onViewConfig: (vaultName: string, e: React.MouseEvent) => void;
-  onNavigateToNotes?: (vaultName: string) => void;
+  onNavigateToNotes?: (vaultName: string, mode?: "folder" | "flat") => void;
   onNavigateToAttachments?: (vaultName: string) => void;
   formatBytes: (bytes: string | number | undefined) => string;
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -75,6 +75,8 @@ function SortableVaultCard({
     zIndex: isDragging ? 50 : 1,
   };
 
+  const [showToolbar, setShowToolbar] = useState(false);
+
   return (
     <article
       ref={setNodeRef}
@@ -84,7 +86,7 @@ function SortableVaultCard({
         "hover:shadow-xl hover:shadow-primary/5 hover:border-primary/40 hover:bg-card group cursor-pointer",
         isDragging && "shadow-2xl border-primary/50 bg-card"
       )}
-      onClick={() => editingId !== vault.id && onNavigateToNotes && onNavigateToNotes(vault.vault)}
+      onClick={() => editingId !== vault.id && onNavigateToNotes && onNavigateToNotes(vault.vault, "folder")}
     >
       {/* 头部：仓库名称与状态 */}
       <header className="flex items-start justify-between gap-3">
@@ -141,7 +143,7 @@ function SortableVaultCard({
           onClick={(e) => {
             if (editingId !== vault.id && onNavigateToNotes) {
               e.stopPropagation();
-              onNavigateToNotes(vault.vault);
+              onNavigateToNotes(vault.vault, "flat");
             }
           }}
         >
@@ -234,7 +236,7 @@ function SortableVaultCard({
       </div>
 
       {/* 操作按钮区 */}
-      <footer className="flex items-center justify-between gap-2  mt-auto">
+      <footer className="flex items-center justify-between gap-2 mt-auto">
         {editingId === vault.id ? (
           <div className="flex items-center justify-end gap-2 w-full">
             <Button
@@ -271,21 +273,22 @@ function SortableVaultCard({
             </Tooltip>
 
             <div className="flex items-center gap-1">
-              {ftsBleveEnabled && (
-                <Tooltip content={t("ui.vault.rebuildIndex")} side="top">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-xl text-muted-foreground/60 hover:text-primary hover:bg-primary/5"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onRebuildIndex(vault.id)
-                    }}
-                  >
-                    <ScanText className="h-3.5 w-3.5" />
-                  </Button>
-                </Tooltip>
-              )}
+              <Tooltip content={t("ui.vault.toolbar") || "工具箱"} side="top">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8 rounded-xl text-muted-foreground/60 hover:text-primary hover:bg-primary/5 transition-all",
+                    showToolbar && "text-primary bg-primary/5"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowToolbar(!showToolbar);
+                  }}
+                >
+                  <Wrench className="h-3.5 w-3.5" />
+                </Button>
+              </Tooltip>
               <Tooltip content={t("ui.vault.edit")} side="top">
                 <Button
                   variant="ghost"
@@ -313,6 +316,60 @@ function SortableVaultCard({
           </>
         )}
       </footer>
+
+      {/* 工具箱面板 - 内部左侧抽屉式拉出 */}
+      {showToolbar && (
+        <div
+          className="absolute left-0 top-0 bottom-0 w-[200px] z-30 flex flex-col gap-3 p-4 rounded-l-2xl border-r border-border bg-card/95 backdrop-blur-md shadow-2xl animate-in slide-in-from-left duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-1">
+            <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+              <Wrench className="h-3.5 w-3.5 text-primary" />
+              {t("ui.vault.toolbar") || "工具箱"}
+            </span>
+            <button
+              className="p-1 rounded-lg hover:bg-muted text-muted-foreground/60 hover:text-foreground transition-colors"
+              onClick={() => setShowToolbar(false)}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-1 overflow-y-auto flex-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 w-full rounded-lg text-xs hover:bg-primary/5 hover:text-primary flex items-center justify-start gap-2 transition-all"
+              onClick={() => {
+                setShowToolbar(false);
+                if (!ftsBleveEnabled) {
+                  toast.warning(t("ui.vault.rebuildIndexDisabledHint") || "您需要启用 Bleve 全文搜索才可以重建");
+                  return;
+                }
+                onRebuildIndex(vault.id);
+              }}
+            >
+              <ScanText className="h-3.5 w-3.5" />
+              <span>{t("ui.vault.rebuildIndex") || "重新全文索引"}</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 w-full rounded-lg text-xs hover:bg-primary/5 hover:text-primary flex items-center justify-start gap-2 transition-all"
+              onClick={() => {
+                setShowToolbar(false);
+                navigator.clipboard.writeText(String(vault.id)).then(() => {
+                  toast.success(t("ui.common.copied") || "已复制");
+                });
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              <span>{t("ui.vault.copyId") || "复制 ID"}</span>
+            </Button>
+          </div>
+        </div>
+      )}
     </article>
   );
 }

@@ -238,8 +238,11 @@ export default {
     "ui.vault.createVaultFirst": "请先创建一个笔记库,然后再进行管理",
     "ui.vault.goToVaultManagement": "前往笔记库管理",
     "ui.vault.setAsDefault": "设为默认",
-    "ui.vault.rebuildIndex": "重建全文搜索索引",
+    "ui.vault.rebuildIndex": "重新全文索引",
     "ui.vault.rebuildIndexConfirm": "确定要重建该笔记库的全文搜索索引吗？此操作将重新扫描并索引所有笔记。",
+    "ui.vault.rebuildIndexDisabledHint": "请先在【系统设置→高级设置】中启用 Bleve 全文搜索功能，才可以重建全文索引",
+    "ui.vault.toolbar": "工具箱",
+    "ui.vault.copyId": "复制 ID",
 
     // --- ui.note ---
     "ui.note.note": "笔记",

@@ -831,6 +831,15 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                     <div className="border-t border-border" />
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-3">
+                                            <Clock className="h-5 w-5 text-muted-foreground" />
+                                            <span className="text-sm font-medium">{t("ui.settings.downloadSessionTimeout")}</span>
+                                        </div>
+                                        <Input value={config.downloadSessionTimeout || ""} onChange={(e) => updateConfig({ downloadSessionTimeout: e.target.value })} placeholder="e.g. 1h, 30m" className="rounded-xl" />
+                                        <p className="text-xs text-muted-foreground whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t("ui.settings.downloadSessionTimeoutDesc") }} />
+                                    </div>
+                                    <div className="border-t border-border" />
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
                                             <GitBranch className="h-5 w-5 text-muted-foreground" />
                                             <span className="text-sm font-medium">{t("ui.settings.historyKeepVersions")}</span>
                                         </div>
@@ -1294,11 +1303,6 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                                                 <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.syncLogRetentionTime")}</Label>
                                                 <Input value={config.syncLogRetentionTime || ""} onChange={(e) => updateConfig({ syncLogRetentionTime: e.target.value })} placeholder="e.g. 30d, 7d" className="rounded-xl" />
                                                 <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.syncLogRetentionTimeDesc")}</p>
-                                            </div>
-                                            <div className="space-y-2 sm:col-span-2">
-                                                <Label className="text-xs text-muted-foreground ml-1">{t("ui.settings.downloadSessionTimeout")}</Label>
-                                                <Input value={config.downloadSessionTimeout || ""} onChange={(e) => updateConfig({ downloadSessionTimeout: e.target.value })} placeholder="e.g. 1h, 30m" className="rounded-xl" />
-                                                <p className="text-[10px] text-muted-foreground ml-1">{t("ui.settings.downloadSessionTimeoutDesc")}</p>
                                             </div>
                                         </div>
                                     </div>
