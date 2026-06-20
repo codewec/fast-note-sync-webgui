@@ -15,9 +15,11 @@ import env from "@/env.ts"
 
 export function EditUser({
   user,
+  disableDeletion,
   onClose,
 }: {
   user: UserInfo
+  disableDeletion: boolean,
   onClose: (needRefresh: boolean) => void
 }) {
   const { t } = useTranslation()
@@ -97,6 +99,7 @@ export function EditUser({
             render={({ field }) => (
               <Checkbox
                 id="isDeleted"
+                disabled={ disableDeletion }
                 checked={field.value}
                 onCheckedChange={field.onChange}
                 ref={field.ref}
