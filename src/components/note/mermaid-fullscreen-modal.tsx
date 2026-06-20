@@ -74,7 +74,7 @@ export function MermaidFullscreenModal({
    */
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !open) return;
+    if (!container) return;
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -102,7 +102,7 @@ export function MermaidFullscreenModal({
     return () => {
       container.removeEventListener('wheel', handleWheel);
     };
-  }, [open]);
+  });
 
   /**
    * 处理鼠标按下事件 - 开始拖拽
@@ -229,7 +229,10 @@ export function MermaidFullscreenModal({
           <div
             ref={containerRef}
             className="w-full h-full overflow-hidden pt-12"
-            style={{ cursor: isDragging ? "grabbing" : "grab" }}
+            style={{
+              cursor: isDragging ? "grabbing" : "grab",
+              userSelect: isDragging ? "none" : "auto",
+            }}
             onMouseDown={handleMouseDown}
           >
             <div
