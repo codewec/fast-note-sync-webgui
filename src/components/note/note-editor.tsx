@@ -12,6 +12,7 @@ import { hashCode } from "@/lib/utils/hash";
 import { format } from "date-fns";
 
 import type { MarkdownEditorRef } from "./markdown-editor";
+import { TableOfContents } from "./table-of-contents";
 
 
 // 懒加载编辑器组件
@@ -739,23 +740,28 @@ export function NoteEditor({
                         </div>
                     </div>
                 ) : (
-                    <div className="h-full overflow-visible rounded-xl border border-border bg-card">
-                        <Suspense fallback={<EditorLoading />}>
-                            <MarkdownEditor
-                                ref={editorRef}
-                                key={`${note?.id}-${isPreviewMode}`}
-                                value={content}
-                                onChange={handleContentChange}
-                                readOnly={isRecycle || isPreviewMode}
-                                placeholder={t("ui.note.noteContentPlaceholder")}
-                                ariaLabel={t("ui.note.editNote")}
-                                vault={vault}
-                                fileLinks={originalNote?.fileLinks}
-                                initialMode={isPreviewMode ? "preview" : "edit"}
-                                notePath={path}
-                                onWikiLinkClick={(target) => onWikiLinkClick?.(target, path)}
-                            />
-                        </Suspense>
+                    <div className="h-full flex flex-col lg:flex-row gap-4 overflow-visible">
+                        <div className="flex-1 min-w-0 overflow-visible rounded-xl border border-border bg-card">
+                            <Suspense fallback={<EditorLoading />}>
+                                <MarkdownEditor
+                                    ref={editorRef}
+                                    key={`${note?.id}-${isPreviewMode}`}
+                                    value={content}
+                                    onChange={handleContentChange}
+                                    readOnly={isRecycle || isPreviewMode}
+                                    placeholder={t("ui.note.noteContentPlaceholder")}
+                                    ariaLabel={t("ui.note.editNote")}
+                                    vault={vault}
+                                    fileLinks={originalNote?.fileLinks}
+                                    initialMode={isPreviewMode ? "preview" : "edit"}
+                                    notePath={path}
+                                    onWikiLinkClick={(target) => onWikiLinkClick?.(target, path)}
+                                />
+                            </Suspense>
+                        </div>
+                        {isPreviewMode && (
+                            <TableOfContents isInline={true} className="hidden lg:flex shrink-0 w-60" />
+                        )}
                     </div>
                 )}
             </div>

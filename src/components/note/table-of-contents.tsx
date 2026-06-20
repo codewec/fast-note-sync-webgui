@@ -14,6 +14,8 @@ interface TableOfContentsProps {
   maxDepth?: number;
   /** 自定义类名 */
   className?: string;
+  /** 是否以侧边栏内联形式展示，默认 false */
+  isInline?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ interface TableOfContentsProps {
 export const TableOfContents: React.FC<TableOfContentsProps> = ({
   maxDepth = 3,
   className,
+  isInline = false,
 }) => {
   const { t } = useTranslation();
   const { headings, activeId, setActiveId } = useToc();
@@ -57,14 +60,14 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
    */
   const scrollToHeading = useCallback((id: string) => {
     const element = headings.find(h => h.id === id)?.element || document.getElementById(id);
-    if (element) {
+    if (element && typeof element.scrollIntoView === 'function') {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [headings]);
 
   // 设置 IntersectionObserver 监听标题可见性
   useEffect(() => {
-    // 清理旧的 observer
+    // 清理旧 of observer
     if (observerRef.current) {
       observerRef.current.disconnect();
     }
@@ -137,6 +140,58 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
       isProgrammaticScrollRef.current = false;
     }, 1000);
   }, [scrollToHeading, setActiveId]);
+
+  if (isInline) {
+    return (
+      <nav
+        className={cn(
+          "w-60 shrink-0 border border-border bg-card rounded-xl flex flex-col h-full overflow-hidden",
+          className
+        )}
+        aria-label={t("ui.toc.label", "文档目录")}
+      >
+        {/* 标题栏 */}
+        <div className="sticky top-0 border-b bg-card px-4 py-3 flex items-center justify-between z-10">
+          <h3 className="text-sm font-semibold">{t("ui.toc.title", "目录")}</h3>
+        </div>
+
+        {/* 目录列表 */}
+        <div className="p-2 flex-1 overflow-y-auto min-h-0">
+          {filteredHeadings.length === 0 ? (
+            <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+              {t("ui.toc.empty", "无目录")}
+            </p>
+          ) : (
+            <ol role="list" className="space-y-1">
+              {filteredHeadings.map(heading => (
+                <li key={heading.id}>
+                  <a
+                    href={`#${heading.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleItemClick(heading.id);
+                    }}
+                    className={cn(
+                      "block rounded-r-md border-l-2 border-transparent px-2 py-1.5 text-sm transition-all duration-200",
+                      activeId === heading.id
+                        ? "border-primary bg-primary/5 font-medium text-primary"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    )}
+                    style={{
+                      paddingLeft: `${(heading.level - 1) * 12 + 8}px`,
+                    }}
+                    aria-current={activeId === heading.id ? "location" : undefined}
+                  >
+                    {heading.text}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <div className={cn("fixed bottom-6 right-6 z-50", className)}>
