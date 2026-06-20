@@ -11,6 +11,7 @@ import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { useTranslation } from "react-i18next";
+import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
 import {
@@ -174,7 +175,7 @@ const CM6_BASIC_SETUP = {
     highlightActiveLineGutter: false,
 };
 
-const REMARK_PLUGINS: NonNullable<React.ComponentProps<typeof ReactMarkdown>["remarkPlugins"]> = [[remarkGfm, { singleTilde: false }]];
+const REMARK_PLUGINS: NonNullable<React.ComponentProps<typeof ReactMarkdown>["remarkPlugins"]> = [remarkBreaks, [remarkGfm, { singleTilde: false }]];
 const OBSIDIAN_SANITIZE_SCHEMA = {
     ...defaultSchema,
     tagNames: [
