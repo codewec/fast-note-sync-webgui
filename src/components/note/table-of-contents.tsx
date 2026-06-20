@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToc } from '@/components/context/toc-context';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { List, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
+import { List, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 
 /**
  * 目录浮动面板组件属性
@@ -62,26 +63,25 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
         // 1. 检查预览区域本身是否具有可滚动的样式与高度溢出
         // 1. Check if the preview area itself has scrollable styles and height overflow
         const style = window.getComputedStyle(el);
-        const isSelfScrollable = el.scrollHeight > el.clientHeight && 
+        const isSelfScrollable = el.scrollHeight > el.clientHeight &&
           (style.overflowY === 'auto' || style.overflowY === 'scroll');
-          
+
         if (isSelfScrollable) {
           setRootEl(el);
           return true;
         }
 
-        // 2. 如果预览区不可滚动，向上冒泡寻找真正发生滚动的父容器，优先匹配 main 元素
-        // 2. If preview is not scrollable, bubble up to find the container that actually scrolls, prioritizing the main element
+        // 2. 如果预览区不可滚动，向上冒泡寻找真正发生滚动的父容器
+        // 2. If preview is not scrollable, bubble up to find the container that actually scrolls
         let parent = el.parentElement;
         while (parent) {
-          if (parent.tagName === 'MAIN') {
-            setRootEl(parent);
-            return true;
+          if (parent.tagName === 'BODY' || parent.tagName === 'HTML') {
+            break;
           }
           const parentStyle = window.getComputedStyle(parent);
           const isParentScrollable = parent.scrollHeight > parent.clientHeight &&
             (parentStyle.overflowY === 'auto' || parentStyle.overflowY === 'scroll');
-            
+
           if (isParentScrollable) {
             setRootEl(parent);
             return true;
@@ -89,14 +89,8 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
           parent = parent.parentElement;
         }
 
-        // 3. 兜底回退：如果存在全局 main 元素则以其为准，否则回退为 null（使用 Viewport）
-        // 3. Fallback: use main element if exists, otherwise fallback to null (using Viewport)
-        const mainEl = document.querySelector('main');
-        if (mainEl) {
-          setRootEl(mainEl);
-          return true;
-        }
-
+        // 3. 兜底回退：若没有检测到任何局部滚动父容器，则表示为全局 window 滚动，设置为 null 以回退到 Viewport
+        // 3. Fallback: if no qualified local scroll container is found, consider it global window scroll and fallback to null
         setRootEl(null);
         return true;
       }
@@ -241,7 +235,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
     isProgrammaticScrollRef.current = true;
     setActiveId(id);
     scrollToHeading(id);
-    
+
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
@@ -255,7 +249,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
     return (
       <nav
         className={cn(
-          "w-60 shrink-0 border border-border bg-card rounded-xl flex flex-col h-fit max-h-[calc(100vh-120px)] sticky top-4 overflow-hidden",
+          "w-60 shrink-0 border border-border bg-card rounded-xl flex flex-col h-fit max-h-[calc(100vh-102px)] sticky top-0 overflow-hidden",
           className
         )}
         aria-label={t("ui.toc.label", "文档大纲")}
