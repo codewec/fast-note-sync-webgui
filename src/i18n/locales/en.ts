@@ -602,6 +602,8 @@ export default {
     "ui.users.userPasswordHint": "Leave blank if no password change is needed.",
     "ui.users.userBlockedHint": "Blocked users will be unable to log in, but their data will not be deleted.",
     "ui.users.getUserListError": "Failed to get user list",
+    "ui.users.userRoleAdmin": "Admin",
+    "ui.users.createdAtOrUpdatedAt": "Created / Updated At",
 
     // --- ui.system ---
     "ui.system.serviceInfo": "Service Information",

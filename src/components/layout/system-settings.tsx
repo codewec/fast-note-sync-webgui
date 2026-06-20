@@ -548,7 +548,7 @@ export function SystemSettings({ onBack, isDashboard = false, isAdmin = false }:
                 {/* 版本信息 */}
                 <VersionOverview showUpgrade={!isDashboard} />
                 {/* UserManagment */}
-                {!isDashboard && isAdmin && <UserManagment />}
+                {!isDashboard && isAdmin && config && <UserManagment adminUid={config.adminUid} />}
                 {/* 服务器系统信息 */}
                 {!isDashboard && (
                     <Overview refreshKey={overviewRefreshKey}>

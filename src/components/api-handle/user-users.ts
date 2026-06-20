@@ -5,10 +5,12 @@ import { useTranslation } from "react-i18next"
 import env from "@/env.ts"
 import type { UserInfo } from "@/lib/types/user"
 
-export function useUsers() {
+export function useUsers(initialPageSize = 3) {
   const { t } = useTranslation()
   const token = localStorage.getItem("token")
   const [users, setUsers] = useState<UserInfo[]>([])
+  const [page, setPage] = useState(1)
+  const [totalRows, setTotalRows] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -19,7 +21,7 @@ export function useUsers() {
       setError(null)
       try {
         const response = await fetch(
-          addCacheBuster(env.API_URL + "/api/admin/users/list"),
+          addCacheBuster(env.API_URL + `/api/admin/users/list?page=${page}&pageSize=${initialPageSize}`),
           {
             method: "GET",
             headers: buildApiHeaders({
@@ -38,7 +40,8 @@ export function useUsers() {
           return
         }
         if (res.code < 100 && res.code > 0 && res.data) {
-          setUsers(res.data)
+          setUsers(res.data.list || [])
+          setTotalRows(res.data.pager?.totalRows || 0)
         } else {
           setError(res.message || t("ui.users.getUserListError"))
         }
@@ -56,7 +59,7 @@ export function useUsers() {
         }
       }
     },
-    [token, t],
+    [token, page, initialPageSize, t],
   )
 
   useEffect(() => {
@@ -70,6 +73,9 @@ export function useUsers() {
 
   return {
     users,
+    totalRows,
+    page,
+    setPage,
     isLoading,
     error,
     refresh: fetchUsers,

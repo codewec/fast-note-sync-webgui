@@ -590,7 +590,20 @@ export default {
     "ui.obsidian.copyToken": "复制令牌",
     "ui.obsidian.copyTokenSuccess": "令牌已复制到剪贴板",
 
-
+    // --- ui.users ---
+    "ui.users.userManagment": "用户管理",
+    "ui.users.user": "用户",
+    "ui.users.userUid": "UID",
+    "ui.users.userStatus": "状态",
+    "ui.users.userStatusBlocked": "已禁用",
+    "ui.users.userStatusActive": "已启用",
+    "ui.users.createUser": "创建用户",
+    "ui.users.editUser": "编辑用户",
+    "ui.users.userPasswordHint": "若不需要修改密码，请留空。",
+    "ui.users.userBlockedHint": "已禁用的用户将无法登录，但其数据不会被删除。",
+    "ui.users.getUserListError": "获取用户列表失败",
+    "ui.users.userRoleAdmin": "管理员",
+    "ui.users.createdAtOrUpdatedAt": "创建 / 更新时间",
 
     // --- ui.system ---
     "ui.system.serviceInfo": "服务信息",
