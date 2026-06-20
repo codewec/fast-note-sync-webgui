@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
+import { Maximize2 } from "lucide-react";
 import { useTheme } from "@/components/context/theme-context";
+import { Button } from "@/components/ui/button";
+import { MermaidFullscreenModal } from "./mermaid-fullscreen-modal";
 
 // 全局基础设置，防止 mermaid 自动寻找页面上的 .mermaid 标签并初始化
 mermaid.initialize({
@@ -8,15 +11,29 @@ mermaid.initialize({
     securityLevel: "strict",
 });
 
+/**
+ * MermaidBlock 组件的属性
+ */
 interface MermaidBlockProps {
+    /** Mermaid 图表代码 */
     code: string;
 }
 
+/**
+ * Mermaid 图表渲染组件
+ *
+ * 将 Mermaid 代码渲染为 SVG 图表，支持深色/浅色主题切换。
+ * 悬停时显示全屏按钮，点击可进入全屏查看模式。
+ *
+ * @param props - 组件属性
+ * @returns Mermaid 图表组件
+ */
 export function MermaidBlock({ code }: MermaidBlockProps) {
     const { resolvedTheme } = useTheme();
     const [svgHtml, setSvgHtml] = useState<string>("");
     const [error, setError] = useState<string>("");
     const [isRendering, setIsRendering] = useState<boolean>(true);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     // 生成唯一的 ID 以防多图渲染冲突
     const idRef = useRef(`mermaid-${Math.random().toString(36).substring(2, 9)}`);
 
@@ -42,10 +59,11 @@ export function MermaidBlock({ code }: MermaidBlockProps) {
                     setError("");
                     setIsRendering(false);
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("Mermaid render error:", err);
                 if (isMounted) {
-                    setError(err.message || String(err));
+                    const errorMessage = err instanceof Error ? err.message : String(err);
+                    setError(errorMessage);
                     setIsRendering(false);
                 }
             }
@@ -76,16 +94,38 @@ export function MermaidBlock({ code }: MermaidBlockProps) {
     }
 
     return (
-        <div className="my-4 flex justify-center overflow-x-auto rounded-lg border border-border/60 bg-muted/20 p-4 relative min-h-[40px]">
-            {isRendering && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
-                    <span className="text-xs text-muted-foreground animate-pulse">Rendering diagram...</span>
-                </div>
-            )}
-            <div 
-                className="mermaid-svg-container w-full flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
-                dangerouslySetInnerHTML={{ __html: svgHtml }}
+        <>
+            <div className="my-4 flex justify-center overflow-x-auto rounded-lg border border-border/60 bg-muted/20 p-4 relative min-h-[40px] group">
+                {isRendering && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
+                        <span className="text-xs text-muted-foreground animate-pulse">Rendering diagram...</span>
+                    </div>
+                )}
+                <div 
+                    className="mermaid-svg-container w-full flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
+                    dangerouslySetInnerHTML={{ __html: svgHtml }}
+                />
+                {/* 悬停遮罩层 - 显示全屏按钮 */}
+                {!isRendering && !error && svgHtml && (
+                    <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setIsFullscreen(true)}
+                        >
+                            <Maximize2 className="size-4 mr-2" />
+                            全屏查看
+                        </Button>
+                    </div>
+                )}
+            </div>
+
+            {/* 全屏模态框 */}
+            <MermaidFullscreenModal
+                open={isFullscreen}
+                onOpenChange={setIsFullscreen}
+                svgHtml={svgHtml}
             />
-        </div>
+        </>
     );
 }
