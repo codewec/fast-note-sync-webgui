@@ -258,18 +258,18 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
           "w-60 shrink-0 border border-border bg-card rounded-xl flex flex-col h-fit max-h-[calc(100vh-120px)] sticky top-4 overflow-hidden",
           className
         )}
-        aria-label={t("ui.toc.label", "文档目录")}
+        aria-label={t("ui.toc.label", "文档大纲")}
       >
         {/* 标题栏 */}
         <div className="sticky top-0 border-b bg-card px-4 py-3 flex items-center justify-between z-10">
-          <h3 className="text-sm font-semibold">{t("ui.toc.title", "目录")}</h3>
+          <h3 className="text-sm font-semibold">{t("ui.toc.title", "大纲")}</h3>
         </div>
 
         {/* 目录列表 */}
         <div ref={listContainerRef} className="p-2 flex-1 overflow-y-auto min-h-0">
           {filteredHeadings.length === 0 ? (
             <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-              {t("ui.toc.empty", "无目录")}
+              {t("ui.toc.empty", "无大纲")}
             </p>
           ) : (
             <ol role="list" className="space-y-1">
@@ -310,7 +310,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
         size="icon"
         className="h-12 w-12 rounded-full shadow-lg"
         onClick={toggleOpen}
-        aria-label={isOpen ? t("ui.toc.close", "关闭目录") : t("ui.toc.open", "打开目录")}
+        aria-label={isOpen ? t("ui.toc.close", "关闭大纲") : t("ui.toc.open", "打开大纲")}
       >
         {isOpen ? <X className="h-5 w-5" /> : <List className="h-5 w-5" />}
       </Button>
@@ -324,18 +324,18 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className="absolute bottom-16 right-0 w-72 max-h-96 overflow-auto rounded-lg border bg-card shadow-xl"
-            aria-label={t("ui.toc.label", "文档目录")}
+            aria-label={t("ui.toc.label", "文档大纲")}
           >
             {/* 标题栏 */}
             <div className="sticky top-0 border-b bg-card px-4 py-3">
-              <h3 className="text-sm font-semibold">{t("ui.toc.title", "目录")}</h3>
+              <h3 className="text-sm font-semibold">{t("ui.toc.title", "大纲")}</h3>
             </div>
 
             {/* 目录列表 */}
             <div className="p-2">
               {filteredHeadings.length === 0 ? (
                 <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-                  {t("ui.toc.empty", "无目录")}
+                  {t("ui.toc.empty", "无大纲")}
                 </p>
               ) : (
                 <ol role="list" className="space-y-1">
