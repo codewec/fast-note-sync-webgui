@@ -56,6 +56,8 @@ export function MermaidFullscreenModal({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewStateRef = useRef(viewState);
+  useEffect(() => { viewStateRef.current = viewState; }, [viewState]);
 
   // 模态框关闭时重置状态
   useEffect(() => {
@@ -104,34 +106,38 @@ export function MermaidFullscreenModal({
     dragStartRef.current = {
       x: e.clientX,
       y: e.clientY,
-      offsetX: viewState.offsetX,
-      offsetY: viewState.offsetY,
+      offsetX: viewStateRef.current.offsetX,
+      offsetY: viewStateRef.current.offsetY,
     };
-  }, [viewState.offsetX, viewState.offsetY]);
-
-  /**
-   * 处理鼠标移动事件 - 拖拽平移
-   */
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !dragStartRef.current) return;
-
-    const dx = e.clientX - dragStartRef.current.x;
-    const dy = e.clientY - dragStartRef.current.y;
-
-    setViewState((prev) => ({
-      ...prev,
-      offsetX: dragStartRef.current!.offsetX + dx,
-      offsetY: dragStartRef.current!.offsetY + dy,
-    }));
-  }, [isDragging]);
-
-  /**
-   * 处理鼠标释放事件 - 结束拖拽
-   */
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    dragStartRef.current = null;
   }, []);
+
+  // 拖拽时在 document 上监听鼠标事件，确保鼠标移出容器后拖拽仍有效
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMoveDoc = (e: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      setViewState((prev) => ({
+        ...prev,
+        offsetX: dragStartRef.current!.offsetX + dx,
+        offsetY: dragStartRef.current!.offsetY + dy,
+      }));
+    };
+
+    const handleMouseUpDoc = () => {
+      setIsDragging(false);
+      dragStartRef.current = null;
+    };
+
+    document.addEventListener('mousemove', handleMouseMoveDoc);
+    document.addEventListener('mouseup', handleMouseUpDoc);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMoveDoc);
+      document.removeEventListener('mouseup', handleMouseUpDoc);
+    };
+  }, [isDragging]);
 
   /**
    * 放大
@@ -216,9 +222,6 @@ export function MermaidFullscreenModal({
             style={{ cursor: isDragging ? "grabbing" : "grab" }}
             onWheel={handleWheel}
             onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
           >
             <div
               className="w-full h-full flex items-center justify-center"
