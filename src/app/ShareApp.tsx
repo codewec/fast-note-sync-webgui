@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNoteHandle } from "@/components/api-handle/note-handle";
 import { NoteDetail } from "@/lib/types/note";
 import { useTranslation } from "react-i18next";
-import { Loader2, Share2, Calendar, FileText, RefreshCw, MoveHorizontal, MoreVertical, Languages, Palette, Lock } from "lucide-react";
+import { Loader2, Share2, Calendar, FileText, RefreshCw, MoveHorizontal, MoreVertical, Languages, Palette, Lock, List } from "lucide-react";
 import { format } from "date-fns";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ColorSchemeSwitcher } from "@/components/layout/ColorSchemeSwitcher";
@@ -45,6 +45,17 @@ export function ShareApp() {
     useEffect(() => {
         localStorage.setItem("share-is-full-width", String(isFullWidth));
     }, [isFullWidth]);
+
+    const [showToc, setShowToc] = useState(() => {
+        if (typeof window !== "undefined") {
+            return localStorage.getItem("share-show-toc") !== "false";
+        }
+        return true;
+    });
+
+    useEffect(() => {
+        localStorage.setItem("share-show-toc", String(showToc));
+    }, [showToc]);
 
     useEffect(() => {
         // 分享页面独立的语言初始化
@@ -303,7 +314,7 @@ export function ShareApp() {
 
     return (
         <TocProvider>
-        <div className="min-h-screen bg-background relative overflow-x-hidden">
+        <div className="min-h-screen bg-background relative overflow-x-clip">
             {/* Background Animation for default Scheme */}
             {colorScheme === 'default' && (
                 <AnimatedBackground />
@@ -369,6 +380,20 @@ export function ShareApp() {
                                 <div><ThemeSwitcher className="rounded-xl" /></div>
                             </Tooltip>
 
+                            {/* Outline Toggle Button - Moved to the far right for desktop */}
+                            <div className="hidden sm:block">
+                                <Tooltip content={showToc ? t("ui.note.hideToc", { defaultValue: "Hide Outline" }) : t("ui.note.showToc", { defaultValue: "Show Outline" })}>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn("size-9 rounded-xl transition-colors", showToc && "bg-primary/10 text-primary")}
+                                        onClick={() => setShowToc(!showToc)}
+                                    >
+                                        <List className="size-5" />
+                                    </Button>
+                                </Tooltip>
+                            </div>
+
                             {/* Mobile only "More" menu */}
                             <div className="flex sm:hidden">
                                 <DropdownMenu>
@@ -383,6 +408,11 @@ export function ShareApp() {
                                             {t("ui.common.refresh")}
                                         </DropdownMenuItem>
                                         
+                                        <DropdownMenuItem onClick={() => setShowToc(!showToc)} className="rounded-lg cursor-pointer">
+                                            <List className="mr-2 h-4 w-4" />
+                                            {showToc ? t("ui.note.hideToc", { defaultValue: "Hide Outline" }) : t("ui.note.showToc", { defaultValue: "Show Outline" })}
+                                        </DropdownMenuItem>
+
                                         <DropdownMenuSeparator />
                                         
                                         <DropdownMenuSub>
@@ -432,19 +462,24 @@ export function ShareApp() {
 
                 {/* 内容区域 */}
                 <main className="flex-1 overflow-visible p-4 sm:p-6 lg:p-8">
-                    <div className={cn("mx-auto rounded-2xl border bg-card shadow-sm transition-all duration-300", isFullWidth ? "max-w-none" : "max-w-5xl")}>
-                        <MarkdownEditor
-                            value={note.content}
-                            readOnly={true}
-                            initialMode="preview"
-                            vault="" // Shared note doesn't need vault context for simple display
-                            fileLinks={note.fileLinks}
-                            fullWidth={isFullWidth}
-                            autoHeight={true}
-                            shareId={shareId || ""}
-                            shareToken={shareToken || ""}
-                            password={password}
-                        />
+                    <div className={cn("mx-auto flex flex-col lg:flex-row items-start gap-4 overflow-visible transition-all duration-300", isFullWidth ? "max-w-none" : "max-w-5xl")}>
+                        <div className="flex-1 min-w-0 overflow-visible rounded-2xl border bg-card shadow-sm">
+                            <MarkdownEditor
+                                value={note.content}
+                                readOnly={true}
+                                initialMode="preview"
+                                vault="" // Shared note doesn't need vault context for simple display
+                                fileLinks={note.fileLinks}
+                                fullWidth={isFullWidth}
+                                autoHeight={true}
+                                shareId={shareId || ""}
+                                shareToken={shareToken || ""}
+                                password={password}
+                            />
+                        </div>
+                        {showToc && (
+                            <TableOfContents isInline={true} className="hidden lg:flex shrink-0 w-60 sticky top-20" />
+                        )}
                     </div>
                 </main>
 
@@ -461,9 +496,6 @@ export function ShareApp() {
                     </div>
                 </footer>
             </div>
-
-            {/* 目录浮动面板 */}
-            <TableOfContents />
         </div>
         </TocProvider>
     );

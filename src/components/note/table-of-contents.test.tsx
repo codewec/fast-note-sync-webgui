@@ -34,6 +34,22 @@ beforeEach(() => {
   vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
   window.history.replaceState(null, '', '/?notes&vault=test#existing-hash');
   latestIntersectionObserverCallback = null;
+
+  // Mock scrollIntoView to simulate JSDOM scrolling for tests
+  Element.prototype.scrollIntoView = function(options?: ScrollIntoViewOptions) {
+    const container = this.closest('.markdown-preview');
+    if (container && container.scrollHeight > container.clientHeight) {
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = this.getBoundingClientRect();
+      const relativeTop = elementRect.top - containerRect.top;
+      const targetTop = container.scrollTop + relativeTop - 80;
+      container.scrollTo({ top: targetTop, behavior: options?.behavior });
+    } else {
+      const elementRect = this.getBoundingClientRect();
+      const targetTop = elementRect.top - 80;
+      window.scrollTo({ top: targetTop, behavior: options?.behavior });
+    }
+  };
 });
 
 // Mock motion 库
@@ -65,10 +81,10 @@ describe('TableOfContents', () => {
     renderWithProvider(<TableOfContents />);
 
     // 点击按钮展开
-    const button = screen.getByRole('button', { name: /目录/i });
+    const button = screen.getByRole('button', { name: /大纲/i });
     fireEvent.click(button);
 
-    expect(screen.getByText(/无目录/i)).toBeInTheDocument();
+    expect(screen.getByText(/无大纲/i)).toBeInTheDocument();
   });
 
   it('有标题时应正确渲染目录列表', () => {
@@ -101,7 +117,7 @@ describe('TableOfContents', () => {
     );
 
     // 点击按钮展开
-    const button = screen.getByRole('button', { name: /目录/i });
+    const button = screen.getByRole('button', { name: /大纲/i });
     fireEvent.click(button);
 
     // 使用 getAllByText 因为标题文本可能同时出现在 DOM 的标题元素和目录链接中
@@ -115,7 +131,7 @@ describe('TableOfContents', () => {
   it('应支持展开/收起切换', () => {
     renderWithProvider(<TableOfContents />);
 
-    const button = screen.getByRole('button', { name: /目录/i });
+    const button = screen.getByRole('button', { name: /大纲/i });
 
     // 初始状态：收起
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
@@ -154,7 +170,7 @@ describe('TableOfContents', () => {
       </TocProvider>
     );
 
-    const button = screen.getByRole('button', { name: /目录/i });
+    const button = screen.getByRole('button', { name: /大纲/i });
     fireEvent.click(button);
 
     expect(screen.getByText('Depth 1')).toBeInTheDocument();
@@ -197,8 +213,8 @@ describe('TableOfContents', () => {
       </TocProvider>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /目录/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'First Heading' }));
+    fireEvent.click(screen.getByRole('button', { name: /大纲/i }));
+    fireEvent.click(screen.getByRole('link', { name: 'First Heading' }));
 
     expect(scrollToSpy).toHaveBeenCalledWith({ top: 160, behavior: 'smooth' });
     expect(window.location.hash).toBe('#existing-hash');
@@ -263,8 +279,8 @@ describe('TableOfContents', () => {
       </TocProvider>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /目录/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Preview Heading' }));
+    fireEvent.click(screen.getByRole('button', { name: /大纲/i }));
+    fireEvent.click(screen.getByRole('link', { name: 'Preview Heading' }));
 
     expect(previewScrollToSpy).toHaveBeenCalledWith({ top: 80, behavior: 'smooth' });
     expect(windowScrollToSpy).not.toHaveBeenCalled();
@@ -334,8 +350,8 @@ describe('TableOfContents', () => {
       </TocProvider>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /目录/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Non Scrollable Preview Heading' }));
+    fireEvent.click(screen.getByRole('button', { name: /大纲/i }));
+    fireEvent.click(screen.getByRole('link', { name: 'Non Scrollable Preview Heading' }));
 
     expect(previewScrollToSpy).not.toHaveBeenCalled();
     expect(windowScrollToSpy).toHaveBeenCalledWith({ top: 180, behavior: 'smooth' });
@@ -370,7 +386,7 @@ describe('TableOfContents', () => {
       </TocProvider>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /目录/i }));
+    fireEvent.click(screen.getByRole('button', { name: /大纲/i }));
 
     act(() => {
       triggerIntersection([
@@ -379,7 +395,35 @@ describe('TableOfContents', () => {
       ]);
     });
 
-    expect(screen.getByRole('button', { name: 'Second Heading' })).toHaveAttribute('aria-current', 'location');
-    expect(screen.getByRole('button', { name: 'First Heading' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'First Heading' })).toHaveAttribute('aria-current', 'location');
+    expect(screen.getByRole('link', { name: 'Second Heading' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('当为内联模式 (isInline) 时，应直接显示目录列表而无需点击按钮', () => {
+    const h1 = document.createElement('h1');
+    h1.id = 'heading-1';
+    h1.textContent = 'First Heading';
+    document.body.appendChild(h1);
+
+    const TestHelper = () => {
+      const { registerHeading } = useToc();
+      React.useEffect(() => {
+        registerHeading({ id: 'heading-1', level: 1, text: 'First Heading', element: h1 });
+      }, [registerHeading]);
+      return null;
+    };
+
+    render(
+      <TocProvider>
+        <TestHelper />
+        <TableOfContents isInline={true} />
+      </TocProvider>
+    );
+
+    // 直接显示大纲，外层是 nav，不需要点击浮动按钮
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'First Heading' })).toBeInTheDocument();
+    // 确认没有浮动按钮
+    expect(screen.queryByRole('button', { name: /大纲/i })).not.toBeInTheDocument();
   });
 });
