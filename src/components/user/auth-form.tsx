@@ -114,10 +114,6 @@ export function AuthForm({ onSuccess, registerIsEnable = true }: AuthFormProps) 
 
   const toggleTab = (tab: 'login' | 'register') => {
     if (tab === activeTab) return
-    if (tab === 'register' && !registerIsEnable) {
-      toast.info(t("ui.auth.registerClosed"))
-      return
-    }
     setActiveTab(tab)
   }
 
@@ -159,7 +155,7 @@ export function AuthForm({ onSuccess, registerIsEnable = true }: AuthFormProps) 
         {/* Auth Card */}
         <div className="auth-card">
           {/* Tabs Switcher at Top */}
-          <div className="auth-tabs-container">
+          {registerIsEnable && <div className="auth-tabs-container">
             <div className="auth-tabs">
               <button
                 onClick={() => toggleTab('login')}
@@ -174,7 +170,7 @@ export function AuthForm({ onSuccess, registerIsEnable = true }: AuthFormProps) 
                 {t("ui.auth.registerButton")}
               </button>
             </div>
-          </div>
+          </div>}
 
           <AnimatePresence mode="wait">
             {activeTab === 'login' ? (

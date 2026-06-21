@@ -165,12 +165,12 @@ export function NoteHistoryModal({ isOpen, onClose, vault, notePath, pathHash, i
             : processedLines;
 
         return (
-            <div className="diff-content overflow-auto max-h-[500px] p-6 bg-slate-50 rounded-xl border border-slate-200 font-mono text-[13px] leading-7 shadow-inner text-slate-700 select-text selection:bg-blue-100 selection:text-blue-900">
+            <div className="diff-content overflow-auto max-h-[500px] p-6 rounded-xl border font-mono text-[13px] leading-7 shadow-inner select-text">
                 <div className="diff-line-row flex items-start group min-h-[28px]">
                     <div className="line-number w-10 shrink-0 text-right pr-3 select-none text-transparent font-mono text-[11px] border-r border-transparent mr-3 leading-7">
                         -
                     </div>
-                    <div className="line-content flex-1 min-w-0 py-0 text-slate-300 font-mono text-[11px] select-text cursor-text min-h-[28px] leading-7 break-words">
+                    <div className="line-content flex-1 min-w-0 py-0 font-mono text-[11px] select-text cursor-text min-h-[28px] leading-7 break-words">
                         {notePath}
                     </div>
                 </div>
@@ -304,7 +304,7 @@ export function NoteHistoryModal({ isOpen, onClose, vault, notePath, pathHash, i
                                             </TableRow>
                                         ) : (
                                             historyList.filter(item => item !== null).map((item) => (
-                                                <TableRow key={item.id} className={`hover:bg-muted/50 transition-colors ${selectedHistory?.id === item.id ? "bg-blue-50" : ""}`}>
+                                                <TableRow key={item.id} className={`hover:bg-muted/50 transition-colors ${selectedHistory?.id === item.id ? "bg-muted" : ""}`}>
                                                     <TableCell className="font-mono">v{item.version}</TableCell>
                                                     <TableCell className="text-muted-foreground">
                                                         <Tooltip
@@ -326,8 +326,8 @@ export function NoteHistoryModal({ isOpen, onClose, vault, notePath, pathHash, i
                                                             }
                                                         >
                                                             <div className="flex items-center gap-2 cursor-help">
-                                                                <Badge 
-                                                                    variant="outline" 
+                                                                <Badge
+                                                                    variant="outline"
                                                                     className="text-xs font-medium px-2 py-0.5 rounded-md hover:bg-primary/5 transition-colors whitespace-nowrap"
                                                                 >
                                                                     {item.clientType || item.clientName || t("ui.common.na")}
@@ -443,62 +443,61 @@ export function NoteHistoryModal({ isOpen, onClose, vault, notePath, pathHash, i
                                         <NotepadText className="h-4 w-4 self-center" />
                                         <span>{t("ui.history.diffDetails", { version: selectedHistory.version })}</span>
                                         <div className="flex items-baseline gap-2 ml-2 text-[10px] font-normal uppercase tracking-wider">
-                                            <span className="px-1.5 py-0 rounded bg-green-100 text-muted-foreground/60 border border-green-200/50 leading-tight">
+                                            <span className="px-1.5 py-0 rounded bg-green-100 text-green-900 no-underline border-b border-green-300 font-bold leading-tight">
                                                 {t("ui.history.diffLegendAdd")}
                                             </span>
-                                            <span className="px-1.5 py-0 rounded bg-red-100 text-muted-foreground/60 border border-red-200/50 leading-tight">
+                                            <span className="px-1.5 py-0 rounded bg-red-100 text-red-900 line-through decoration-red-400 opacity-70 leading-tight">
                                                 {t("ui.history.diffLegendDel")}
                                             </span>
                                         </div>
                                     </h3>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        {/* 恢复到此版本按钮 */}
-                                        {!isRecycle && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setRestoreConfirmOpen(true)}
-                                                className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
-                                            >
-                                                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                                                {t("ui.history.restoreToVersion")}
-                                            </Button>
-                                        )}
-                                        <div className="flex items-center space-x-2 bg-slate-100 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-                                            <Checkbox
-                                                id="showDiffOnly"
-                                                checked={showDiffOnly}
-                                                onCheckedChange={(checked) => {
-                                                    const val = !!checked;
-                                                    setShowDiffOnly(val);
-                                                    if (val) setShowOriginal(false);
-                                                }}
-                                            />
-                                            <Label
-                                                htmlFor="showDiffOnly"
-                                                className="text-xs sm:text-sm font-medium leading-none cursor-pointer text-slate-700"
-                                            >
-                                                {t("ui.history.showDiffOnly")}
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2 bg-slate-100 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-                                            <Checkbox
-                                                id="showOriginalContent"
-                                                checked={showOriginal}
-                                                onCheckedChange={(checked) => {
-                                                    const val = !!checked;
-                                                    setShowOriginal(val);
-                                                    if (val) setShowDiffOnly(false);
-                                                }}
-                                            />
-                                            <Label
-                                                htmlFor="showOriginalContent"
-                                                className="text-xs sm:text-sm font-medium leading-none cursor-pointer text-slate-700"
-                                            >
-                                                {t("ui.history.showOriginalContent")}
-                                            </Label>
-                                        </div>
-                                    </div>
+                                    {/* 恢复到此版本按钮 */}
+                                    {!isRecycle && (
+                                      <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={() => setRestoreConfirmOpen(true)}
+                                        >
+                                            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                                            {t("ui.history.restoreToVersion")}
+                                      </Button>
+                                    )}
+                                </div>
+                                <div className="flex gap-3 mb-4">
+                                  <div className="flex items-center space-x-2 px-2 sm:px-3 py-1.5 rounded-lg border shadow-sm">
+                                      <Checkbox
+                                          id="showDiffOnly"
+                                          checked={showDiffOnly}
+                                          onCheckedChange={(checked) => {
+                                              const val = !!checked;
+                                              setShowDiffOnly(val);
+                                              if (val) setShowOriginal(false);
+                                          }}
+                                      />
+                                      <Label
+                                          htmlFor="showDiffOnly"
+                                          className="text-xs sm:text-sm font-medium leading-none cursor-pointer"
+                                      >
+                                          {t("ui.history.showDiffOnly")}
+                                      </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2 px-2 sm:px-3 py-1.5 rounded-lg border shadow-sm">
+                                      <Checkbox
+                                          id="showOriginalContent"
+                                          checked={showOriginal}
+                                          onCheckedChange={(checked) => {
+                                              const val = !!checked;
+                                              setShowOriginal(val);
+                                              if (val) setShowDiffOnly(false);
+                                          }}
+                                      />
+                                      <Label
+                                          htmlFor="showOriginalContent"
+                                          className="text-xs sm:text-sm font-medium leading-none cursor-pointer"
+                                      >
+                                          {t("ui.history.showOriginalContent")}
+                                      </Label>
+                                  </div>
                                 </div>
                                 {detailLoading ? (
                                     <div className="py-8 text-center text-muted-foreground">{t("loadingHistory")}</div>

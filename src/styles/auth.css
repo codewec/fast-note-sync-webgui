@@ -212,8 +212,10 @@ body:has(.auth-page-container)::after {
 }
 
 .auth-page-container.dark .auth-button-primary {
-  background-color: #8a8a8a; /* Medium grey like reference */
-  color: #000000;
+    background-color: var(
+        --default-text-primary
+    ); /* Use dark text color for button bg */
+    color: #000000;
 }
 
 .auth-button-primary:hover {
