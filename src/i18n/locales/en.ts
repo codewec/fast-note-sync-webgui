@@ -75,6 +75,7 @@ export default {
     "ui.common.totalSize": "Total space usage",
     "ui.common.quickActions": "Quick actions",
     "ui.common.tips": "Tips",
+    "ui.common.recommended": "Recommended",
 
 
     // --- ui.auth ---
@@ -82,7 +83,6 @@ export default {
     "ui.auth.logout": "Logout",
     "ui.auth.register": "Register",
     "ui.auth.registerButton": "Register",
-    "ui.auth.registerClosed": "User registration is closed",
     "ui.auth.credentials": "Username (or Email)",
     "ui.auth.username": "Username",
     "ui.auth.password": "Password",

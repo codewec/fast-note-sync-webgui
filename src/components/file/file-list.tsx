@@ -805,13 +805,13 @@ export function FileList({ vault, vaults, onVaultChange, isRecycle = false, page
             {files.length > 0 && (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 pt-2 shrink-0">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{t("ui.common.of")} {totalRows} {t("ui.file.results")}</span>
+                        <span className="whitespace-nowrap">{t("ui.common.of")} {totalRows} {t("ui.file.results")}</span>
                         <Select value={pageSize.toString()} onValueChange={(val) => {
                             const newSize = parseInt(val);
                             setPageSize(newSize);
                             setPage(1);
                         }}>
-                            <SelectTrigger className="h-8 w-25 rounded-xl">
+                            <SelectTrigger className="h-8 min-w-25 rounded-xl">
                                 <SelectValue placeholder={pageSize.toString()} />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">

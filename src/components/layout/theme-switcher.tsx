@@ -104,7 +104,7 @@ export function ThemeSwitcher({
                     </Button>
                 )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align={align} className="w-44 rounded-xl">
+            <DropdownMenuContent align={align} className="min-w-44 rounded-xl">
                 <DropdownMenuRadioGroup
                     value={theme}
                     onValueChange={(value) => setTheme(value as Theme)}

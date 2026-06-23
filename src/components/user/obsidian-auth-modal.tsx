@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import env from "@/env.ts";
+import { Textarea } from "../ui/textarea";
 
 interface ObsidianAuthModalProps {
   open: boolean;
@@ -20,9 +21,10 @@ interface ObsidianAuthModalProps {
 
 export function ObsidianAuthModal({ open, onOpenChange, vaultName, onSuccess }: ObsidianAuthModalProps) {
   const { t } = useTranslation();
+  const defaultPreset = t("ui.obsidian.presetWin", "我的Win")
   const { handleCreateToken, isLoading } = useTokenHandle();
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<string>("我的Win");
+  const [selectedPreset, setSelectedPreset] = useState<string>(defaultPreset);
   const [customNote, setCustomNote] = useState("");
   const [limitVault, setLimitVault] = useState(true);
 
@@ -30,11 +32,11 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName, onSuccess }: 
   useEffect(() => {
     if (!open) {
       setGeneratedToken(null);
-      setSelectedPreset("我的Win");
+      setSelectedPreset(defaultPreset);
       setCustomNote("");
       setLimitVault(true);
     }
-  }, [open]);
+  }, [open, defaultPreset]);
 
   const onGenerate = async () => {
     // Generate a token for Obsidian with rest and ws scopes
@@ -150,13 +152,13 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName, onSuccess }: 
               <h3 className="font-bold text-sm tracking-tight text-foreground">
                 {t("ui.obsidian.tokenRequired", "自动生成授权令牌")}
               </h3>
-              <p className="text-[11px] text-muted-foreground/90 max-w-[260px] mx-auto leading-relaxed">
+              <p className="text-[11px] text-muted-foreground/90 mx-auto leading-relaxed">
                 {t("ui.obsidian.tokenPrompt", "点击下方按钮生成一个专用的授权令牌，用于在 Obsidian 中进行同步, 服务端不会保存令牌。")}
               </p>
             </div>
 
             {/* Form Fields & Remark Selection */}
-            <div className="w-[180px] space-y-3 z-10">
+            <div className="min-w-45 space-y-3 z-10">
               <div className="space-y-1 w-full">
                 <Label className="text-[10px] font-semibold tracking-wider text-muted-foreground/75 uppercase text-center block w-full">
                   {t("ui.obsidian.remark", "令牌备注")}
@@ -168,19 +170,19 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName, onSuccess }: 
                       <SelectValue placeholder={t("ui.obsidian.remark", "令牌备注")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="我的Win" className="text-xs">
+                      <SelectItem value= {t("ui.obsidian.presetWin", "我的Win")} className="text-xs">
                         {t("ui.obsidian.presetWin", "我的Win")}
                       </SelectItem>
-                      <SelectItem value="我的Mac" className="text-xs">
+                      <SelectItem value={t("ui.obsidian.presetMac", "我的Mac")} className="text-xs">
                         {t("ui.obsidian.presetMac", "我的Mac")}
                       </SelectItem>
-                      <SelectItem value="我的手机" className="text-xs">
+                      <SelectItem value={t("ui.obsidian.presetPhone", "我的手机")} className="text-xs">
                         {t("ui.obsidian.presetPhone", "我的手机")}
                       </SelectItem>
-                      <SelectItem value="我的平板" className="text-xs">
+                      <SelectItem value={t("ui.obsidian.presetTablet", "我的平板")} className="text-xs">
                         {t("ui.obsidian.presetTablet", "我的平板")}
                       </SelectItem>
-                      <SelectItem value="我的安卓" className="text-xs">
+                      <SelectItem value={t("ui.obsidian.presetAndroid", "我的安卓")} className="text-xs">
                         {t("ui.obsidian.presetAndroid", "我的安卓")}
                       </SelectItem>
                       <SelectItem value="custom" className="text-xs font-semibold text-primary">
@@ -234,7 +236,7 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName, onSuccess }: 
             <Button
               onClick={onGenerate}
               disabled={isLoading}
-              className="rounded-xl h-9 w-[180px] text-xs font-bold bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center justify-center mt-5"
+              className="rounded-xl h-9 min-w-45 text-xs font-bold bg-linear-to-r from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center justify-center mt-5"
             >
               {isLoading ? (
                 <>
@@ -270,9 +272,9 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName, onSuccess }: 
             {/* Config Mode Option Cards */}
             <div className="space-y-3">
               {/* Method 1: Automatic One-Click SSO Config (Recommended) */}
-              <div 
+              <div
                 onClick={() => { window.location.href = getObsidianUrl(); }}
-                className="border border-primary/20 bg-primary/5 hover:bg-primary/10 rounded-xl p-3 sm:p-4 transition-all duration-200 flex items-center justify-between group cursor-pointer shadow-sm hover:shadow-md"
+                className="border border-primary/20 bg-primary/5 hover:bg-primary/10 rounded-xl p-3 sm:p-4 transition-all duration-200 space-y-2 group cursor-pointer shadow-sm hover:shadow-md"
               >
                 <div className="space-y-0.5 text-left min-w-0 pr-3">
                   <h4 className="font-bold text-xs text-primary flex items-center gap-1.5">
@@ -297,20 +299,20 @@ export function ObsidianAuthModal({ open, onOpenChange, vaultName, onSuccess }: 
                   <h4 className="font-bold text-xs text-foreground/80">
                     {t("ui.obsidian.methodTwo", "方式二：手动复制 JSON 信息")}
                   </h4>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-6 text-[10px] rounded-lg text-muted-foreground hover:text-foreground hover:bg-background border-border/50 gap-1 px-2.5 shadow-sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] rounded-lg text-muted-foreground hover:text-foreground hover:bg-background border-border/50 gap-1 px-2.5 shadow-sm"
                     onClick={handleCopyConfig}
                   >
                     <Clipboard className="h-3 w-3" />
                     {t("ui.vault.copyConfig", "复制 JSON")}
                   </Button>
                 </div>
-                <div className="relative group">
-                  <pre className="p-3 rounded-lg bg-background text-[10px] sm:text-xs overflow-x-auto max-h-24 font-mono whitespace-pre-wrap break-all border border-border/60 text-muted-foreground/85 leading-normal">
-                    {getConfigJson()}
-                  </pre>
+                  <div className="relative group">
+                    <Textarea readOnly className="p-3 rounded-lg bg-background text-[10px]! sm:text-xs! min-h-52 font-mono whitespace-pre-wrap border border-border/60 text-muted-foreground/85">
+                      {getConfigJson()}
+                    </Textarea>
                 </div>
               </div>
             </div>

@@ -323,7 +323,7 @@ function SortableVaultCard({
       {/* 工具箱面板 - 内部左侧抽屉式拉出 */}
       {showToolbar && (
         <div
-          className="absolute left-0 top-0 bottom-0 w-[200px] z-30 flex flex-col gap-3 p-4 rounded-l-2xl border-r border-border bg-card/95 backdrop-blur-md shadow-2xl animate-in slide-in-from-left duration-200"
+          className="absolute left-0 top-0 bottom-0 min-w-50 z-30 flex flex-col gap-3 p-4 rounded-l-2xl border-r border-border bg-card/95 backdrop-blur-md shadow-2xl animate-in slide-in-from-left duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-1">
@@ -736,7 +736,7 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments, ftsBleve
 
       {/* 右侧卡片 - 令牌管理 */}
       <section className="space-y-4 lg:sticky lg:top-4 h-full">
-        <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card/30 p-1 custom-shadow backdrop-blur-sm min-h-[500px] max-h-[calc(100vh-120px)] overflow-hidden">
+        <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card/30 p-1 custom-shadow backdrop-blur-sm max-h-[calc(100vh-120px)] overflow-hidden">
           <div className="flex items-center justify-between px-5 pt-5 pb-2">
             <div className="flex items-center gap-2.5">
               <h2 className="text-xl font-black tracking-tight">{t("ui.vault.authTokenConfig") || "授权令牌"}</h2>
@@ -755,12 +755,12 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments, ftsBleve
 
               <div className="flex items-center gap-1.5 ml-2 border-l border-border/40 pl-2">
                 <Tooltip content={`${t("ui.token.issueTypeManual")}`} side="top">
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     className={cn(
                       "h-6 px-2 flex items-center justify-center gap-1.5 font-bold cursor-pointer transition-all duration-300 border-none rounded-lg",
-                      tokenFilter === 2 
-                        ? "bg-blue-500 text-white shadow-sm shadow-blue-500/20 scale-110" 
+                      tokenFilter === 2
+                        ? "bg-blue-500 text-white shadow-sm shadow-blue-500/20 scale-110"
                         : "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
                     )}
                     onClick={() => handleSetTokenFilter(2)}
@@ -771,12 +771,12 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments, ftsBleve
                 </Tooltip>
 
                 <Tooltip content={`${t("ui.token.issueTypeLogin")}`} side="top">
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     className={cn(
                       "h-6 px-2 flex items-center justify-center gap-1.5 font-bold cursor-pointer transition-all duration-300 border-none rounded-lg",
-                      tokenFilter === 1 
-                        ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-110" 
+                      tokenFilter === 1
+                        ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 scale-110"
                         : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
                     )}
                     onClick={() => handleSetTokenFilter(1)}
@@ -813,10 +813,10 @@ export function VaultList({ onNavigateToNotes, onNavigateToAttachments, ftsBleve
           </div>
 
           <div className="flex-1 overflow-auto px-5 pb-8 scrollbar-thin">
-            <TokenManager 
-              ref={tokenManagerRef} 
-              isCompact 
-              onCountChange={setTokenCount} 
+            <TokenManager
+              ref={tokenManagerRef}
+              isCompact
+              onCountChange={setTokenCount}
               onOnlineCountChange={setOnlineCount}
               onLoginCountChange={setLoginCount}
               onManualCountChange={setManualCount}

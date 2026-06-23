@@ -82,7 +82,6 @@ export default {
     "ui.auth.logout": "로그아웃",
     "ui.auth.register": "회원가입",
     "ui.auth.registerButton": "회원가입",
-    "ui.auth.registerClosed": "사용자 회원가입이 닫혔습니다",
     "ui.auth.credentials": "사용자명 (또는 이메일)",
     "ui.auth.username": "사용자 이름",
     "ui.auth.password": "비밀번호",

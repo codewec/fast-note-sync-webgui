@@ -82,7 +82,6 @@ export default {
     "ui.auth.logout": "ログアウト",
     "ui.auth.register": "登録",
     "ui.auth.registerButton": "登録",
-    "ui.auth.registerClosed": "ユーザー登録は終了しています",
     "ui.auth.credentials": "ユーザー名（またはメールアドレス）",
     "ui.auth.username": "ユーザー名",
     "ui.auth.password": "パスワード",

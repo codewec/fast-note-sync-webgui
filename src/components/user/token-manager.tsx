@@ -537,18 +537,9 @@ const TokenManagerInner = (
                           onCheckedChange={() => toggleProtocol(p)}
                           className="h-3.5 w-3.5"
                         />
-                        <Label htmlFor={`p-${p}`} className="capitalize cursor-pointer text-xs">{p}</Label>
+                        <Label htmlFor={`p-${p}`} className="uppercase cursor-pointer text-xs">{p}</Label>
                       </div>
                     ))}
-                    <div className="flex items-center space-x-1.5 border-l pl-3 border-border/50 h-4">
-                      <Checkbox
-                        id="p-all"
-                        checked={newProtocols.length === 0}
-                        onCheckedChange={(checked) => checked ? setNewProtocols([]) : setNewProtocols(["rest", "ws"])}
-                        className="h-3.5 w-3.5"
-                      />
-                      <Label htmlFor="p-all" className="cursor-pointer font-bold text-xs">{t("ui.common.unrestricted") || "不限制"}</Label>
-                    </div>
                   </div>
                 </div>
 
@@ -688,14 +679,16 @@ const TokenManagerInner = (
                             <Label htmlFor={`v-${v.id}`} className="cursor-pointer text-xs font-medium">{v.vault}</Label>
                           </div>
                         ))}
-                        <div className="flex items-center space-x-2 bg-background/50 hover:bg-background/80 px-2.5 py-1.5 rounded-lg border border-border/40 transition-colors ml-auto">
-                          <Checkbox
-                            id="v-all"
-                            checked={selectedVaults.length === 0}
-                            onCheckedChange={(checked) => checked && setSelectedVaults([])}
-                            className="h-3.5 w-3.5"
-                          />
-                          <Label htmlFor="v-all" className="cursor-pointer text-xs font-bold text-primary">{t("ui.common.unrestricted")}</Label>
+                        <div className="flex w-full col-span-3 border-t border-border/50 pt-2 mt-1">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="v-all"
+                              checked={selectedVaults.length === 0}
+                              onCheckedChange={(checked) => checked && setSelectedVaults([])}
+                              className="h-3.5 w-3.5"
+                            />
+                            <Label htmlFor="v-all" className="cursor-pointer text-xs font-bold text-primary">{t("ui.common.unrestricted")}</Label>
+                          </div>
                         </div>
                       </>
                     )}

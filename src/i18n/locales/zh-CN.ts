@@ -82,7 +82,6 @@ export default {
     "ui.auth.logout": "退出登录",
     "ui.auth.register": "注册",
     "ui.auth.registerButton": "注册",
-    "ui.auth.registerClosed": "用户注册已关闭",
     "ui.auth.credentials": "用户名 ( 或 邮箱 )",
     "ui.auth.username": "用户名",
     "ui.auth.password": "密码",
