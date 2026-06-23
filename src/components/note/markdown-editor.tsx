@@ -910,7 +910,11 @@ export function transformObsidianSyntax(
         return `${prefix}<span class="obsidian-tag">#${tag}</span>`;
     });
 
-    // 7. 还原代码块占位符
+    // 7. 将 KaTeX 不支持的 multline 环境替换为支持的 gathered
+    result = result.replace(/\\begin\{multline\}/g, "\\begin{gathered}");
+    result = result.replace(/\\end\{multline\}/g, "\\end{gathered}");
+
+    // 8. 还原代码块占位符
     result = result.replace(new RegExp(`${CODE_PLACEHOLDER.replace(/\0/g, "\\0")}(\\d+)\\0`, "g"), (_, index) => {
         return codeBlocks[parseInt(index, 10)];
     });
