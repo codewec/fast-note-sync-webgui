@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("katex/dist/katex.min.css", () => ({}));
+
 async function loadTransform() {
     vi.resetModules();
     const mod = await import("./markdown-editor");
