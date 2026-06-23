@@ -64,7 +64,7 @@ export function UserManagment({ adminUid = 0 }: { adminUid?: number }) {
             <DialogTitle>{t("ui.users.editUser")}</DialogTitle>
           </DialogHeader>
           {editUserFormOpen && (
-            <EditUser user={editUserFormOpen} onClose={onEditUserFormClose} />
+            <EditUser user={editUserFormOpen} disableDeletion={ adminUid !== 0 && editUserFormOpen.uid === adminUid  } onClose={onEditUserFormClose} />
           )}
         </DialogContent>
       </Dialog>
