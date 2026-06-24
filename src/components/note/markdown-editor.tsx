@@ -8,11 +8,14 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import { MermaidBlock } from "./mermaid-block";
 import { renderToStaticMarkup } from "react-dom/server";
 import rehypeHighlight from "rehype-highlight";
+import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { useTranslation } from "react-i18next";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import "katex/dist/katex.min.css";
 
 import {
     AlertTriangle, Bug, Check, CheckCircle2, ClipboardList, Flame,
@@ -175,7 +178,7 @@ const CM6_BASIC_SETUP = {
     highlightActiveLineGutter: false,
 };
 
-const REMARK_PLUGINS: NonNullable<React.ComponentProps<typeof ReactMarkdown>["remarkPlugins"]> = [remarkBreaks, [remarkGfm, { singleTilde: false }]];
+const REMARK_PLUGINS: NonNullable<React.ComponentProps<typeof ReactMarkdown>["remarkPlugins"]> = [remarkBreaks, [remarkGfm, { singleTilde: false }], remarkMath];
 const OBSIDIAN_SANITIZE_SCHEMA = {
     ...defaultSchema,
     tagNames: [
@@ -192,7 +195,7 @@ const OBSIDIAN_SANITIZE_SCHEMA = {
     ],
     attributes: {
         ...(defaultSchema.attributes ?? {}),
-        span: [...(defaultSchema.attributes?.span ?? []), "className", "title"],
+        span: [...(defaultSchema.attributes?.span ?? []), "className", "title", "style", "aria-hidden"],
         img: [...(defaultSchema.attributes?.img ?? []), "width"],
         // Whitelist of safe presentation/playback attributes only — no event
         // handlers (onload/onerror/etc) and no scriptable URLs because the
@@ -789,6 +792,7 @@ function escapeHtmlAttribute(value: string): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const REHYPE_PLUGINS: any[] = [
     rehypeRaw,
+    rehypeKatex,
     [rehypeSanitize, OBSIDIAN_SANITIZE_SCHEMA],
     rehypeHighlight,
 ];
@@ -906,7 +910,11 @@ export function transformObsidianSyntax(
         return `${prefix}<span class="obsidian-tag">#${tag}</span>`;
     });
 
-    // 7. 还原代码块占位符
+    // 7. 将 KaTeX 不支持的 multline 环境替换为支持的 gathered
+    result = result.replace(/\\begin\{multline\}/g, "\\begin{gathered}");
+    result = result.replace(/\\end\{multline\}/g, "\\end{gathered}");
+
+    // 8. 还原代码块占位符
     result = result.replace(new RegExp(`${CODE_PLACEHOLDER.replace(/\0/g, "\\0")}(\\d+)\\0`, "g"), (_, index) => {
         return codeBlocks[parseInt(index, 10)];
     });
